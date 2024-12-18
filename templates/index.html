@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Account Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.4.0/axios.min.js"></script>
+    <style>
+        /* Мобильная адаптация */
+        body {
+            font-family: Arial, sans-serif;
+        }
+        
+        .container {
+            max-width: 100%;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .table th, .table td {
+            text-align: center;
+        }
+
+        /* Адаптация формы добавления аккаунта */
+        #addAccountForm .col-auto {
+            width: 100%;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .btn {
+                width: auto;
+            }
+        }
+
+        /* Таблица */
+        table {
+            font-size: 0.875rem;
+        }
+
+        .table td, .table th {
+            word-wrap: break-word;
+        }
+
+        /* Улучшенные отступы */
+        .mt-4, .mb-4 {
+            margin-top: 20px !important;
+            margin-bottom: 20px !important;
+        }
+
+        .mt-5 {
+            margin-top: 50px !important;
+        }
+        .form-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+        .form-container .form-control {
+            margin-bottom: 10px;
+        }
+
+        .form-container h3 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <!-- Форма для логина -->
+    <div class="form-container" id="loginFormContainer">
+        <h3>Войти в систему</h3>
+        <form id="loginForm">
+            <input type="username" id="loginUsername" class="form-control" placeholder="Username" required>
+            <input type="password" id="loginPassword" class="form-control" placeholder="Пароль" required>
+            <button type="submit" class="btn btn-primary w-100">Войти</button>
+        </form>
+        <p class="text-center mt-3">Нет аккаунта? <a href="#" id="showRegisterForm">Зарегистрироваться</a></p>
+    </div>
+
+    <!-- Форма для регистрации -->
+    <div class="form-container" id="registerFormContainer" style="display: none;">
+        <h3>Регистрация</h3>
+        <form id="registerForm">
+            <input type="username" id="registerUsername" class="form-control" placeholder="Username" required>
+            <input type="password" id="registerPassword" class="form-control" placeholder="Пароль" required>
+            <input type="password" id="registerConfirmPassword" class="form-control" placeholder="Подтвердите пароль" required>
+            <button type="submit" class="btn btn-success w-100">Зарегистрироваться</button>
+        </form>
+        <p class="text-center mt-3">Есть аккаунт? <a href="#" id="showLoginForm">Войти</a></p>
+    </div>
+
+    <!-- Основной контент -->
+    <div id="mainContent" style="display: none;">
+        <h1 class="text-center">Instagram Account Manager</h1>
+        
+        <div class="text-end">
+            <button id="logoutButton" class="btn btn-danger">Выйти</button>
+        </div>
+
+        <div class="mt-4 mb-4">
+            <h3>Добавить аккаунт</h3>
+            <form id="addAccountForm" class="row g-3">
+                <div class="col-auto">
+                    <input type="text" id="usernameInput" class="form-control" placeholder="Instagram Username">
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="accountList" class="mt-4">
+            <h3>Таблица аккаунтов</h3>
+            <table class="table table-bordered">
+                <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Followers</th>
+                    <th>Avg Views</th>
+                    <th>Reels with >10K Views</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="accountsTableBody">
+                {% for account in accounts %}
+                <tr>
+                    <td><a href="https://www.instagram.com/{{ account[1] }}" target="_blank">{{ account[1] }}</a></td>
+                    <td>{{ account[2] }}</td>
+                    <td>{{ account[3] }}</td>
+                    <td>{{ account[4] }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-account" data-username="{{ account[1] }}">Delete</button>
+                        <button class="btn btn-primary btn-sm send-message" data-username="{{ account[1] }}">Отправить сообщение</button>
+                        <button class="btn btn-success btn-sm add-following" data-username="{{ account[1] }}">Добавить Followings</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    window.onload = async () => {
+        try {
+            const response = await axios.get('/');
+            if (response.data.username) {
+                // Пользователь авторизован, показываем основной контент
+                document.getElementById('loginFormContainer').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Failed to fetch session status:', error);
+        }
+    };
+
+    document.getElementById('logoutButton').addEventListener('click', async () => {
+        try {
+            await axios.post('/logout');
+            alert('Logged out successfully!');
+            location.reload();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+    });
+
+    document.getElementById('showRegisterForm').addEventListener('click', function() {
+        document.getElementById('loginFormContainer').style.display = 'none';
+        document.getElementById('registerFormContainer').style.display = 'block';
+    });
+
+    document.getElementById('showLoginForm').addEventListener('click', function() {
+        document.getElementById('registerFormContainer').style.display = 'none';
+        document.getElementById('loginFormContainer').style.display = 'block';
+    });
+
+    // Логика для логина
+    document.getElementById('loginForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        try {
+            const response = await axios.post('/login', { username, password });
+            alert(response.data.message);
+            // Перенаправление на главную страницу после успешного логина
+            document.getElementById('loginFormContainer').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+        } catch (error) {
+            alert(error.response.data.error || 'Login failed');
+        }
+    });
+
+    // Логика для регистрации
+    document.getElementById('registerForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const username = document.getElementById('registerUsername').value;
+        const password = document.getElementById('registerPassword').value;
+        const confirmPassword = document.getElementById('registerConfirmPassword').value;
+
+        if (password !== confirmPassword) {
+            alert("Пароли не совпадают");
+            return;
+        }
+
+        try {
+            const response = await axios.post('/register', { username, password });
+            alert(response.data.message);
+            // Переключаем на форму логина после успешной регистрации
+            document.getElementById('registerFormContainer').style.display = 'none';
+            document.getElementById('loginFormContainer').style.display = 'block';
+        } catch (error) {
+            alert(error.response.data.error || 'Registration failed');
+        }
+    });
+    
+    document.getElementById('addAccountForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        
+        const username = document.getElementById('usernameInput').value;
+        
+        const response = await fetch('/add_account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert(result.message);
+            // Обновить список аккаунтов без перезагрузки страницы
+            // Например, можно вызвать функцию для обновления списка аккаунтов
+            updateAccountList();
+        } else {
+            alert(result.error || 'Ошибка при добавлении аккаунта');
+        }
+    });
+
+
+    document.querySelectorAll('.delete-account').forEach(button => {
+        button.addEventListener('click', async function () {
+            const username = this.getAttribute('data-username');
+            if (!confirm(`Are you sure you want to delete ${username}?`)) {
+                return;
+            }
+            try {
+                const response = await axios.post('/delete_account', { username });
+                alert(response.data.message);
+                updateAccountList();
+            } catch (error) {
+                alert(error.response.data.error || 'Failed to delete account');
+            }
+        });
+    });
+
+    document.querySelectorAll('.add-following').forEach(button => {
+        button.addEventListener('click', async function () {
+            const username = this.getAttribute('data-username');
+            if (!confirm(`Are you sure you want to add followings from ${username}?`)) {
+                return;
+            }
+            try {
+                const response = await axios.post('/analyze_subscriptions', { username });
+                alert(response.data.message);
+                updateAccountList();
+            } catch (error) {
+                alert(error.response.data.error || 'Failed to delete account');
+            }
+        });
+    });
+
+
+    async function updateAccountList() {
+        const response = await fetch('/get_accounts');
+        const accounts = await response.json();
+        
+        const accountsTableBody = document.querySelector('#accountsTableBody');
+        accountsTableBody.innerHTML = ''; // Очистить текущий список
+
+        accounts.forEach(account => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td><a href="https://www.instagram.com/${account[1]}" target="_blank">${account[1]}</a></td>
+                <td>${account[2]}</td>
+                <td>${account[3]}</td>
+                <td>${account[4]}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm delete-account" data-username="${account[1]}">Delete</button>
+                    <button class="btn btn-primary btn-sm send-message" data-username="${account[1]}">Отправить сообщение</button>
+                    <button class="btn btn-success btn-sm add-following" data-username="${account[1]}">Добавить Followings</button>
+                </td>
+            `;
+            
+            accountsTableBody.appendChild(row);
+        });
+    }
+
+    let lastMessage = "";
+
+    document.querySelectorAll('.send-message').forEach(button => {
+        button.addEventListener('click', async function () {
+            // Получаем username из атрибута кнопки или родительского элемента
+            const username = this.dataset.username || this.getAttribute('data-username');
+            
+            if (!username) {
+                alert("Не удалось определить имя пользователя.");
+                return;
+            }
+    
+            const message = prompt(`Введите сообщение для ${username}:`, lastMessage);
+            
+            if (message === null) {
+                return; // Отмена ввода
+            }
+    
+            if (!message.trim()) {
+                alert("Сообщение не может быть пустым.");
+                return;
+            }
+    
+            // Сохраняем введённое сообщение
+            lastMessage = message;
+    
+            // Отправляем сообщение на сервер
+            fetch('/send_message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(`Ошибка: ${data.error}`);
+                } else {
+                    alert(`Сообщение отправлено пользователю ${username}: "${message}"`);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    });
+
+</script>
+</body>
+</html>
