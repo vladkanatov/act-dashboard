@@ -125,59 +125,59 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     data = await request.json()
     username = data.get("username")
     
-#     if not username:
-#         raise HTTPException(status_code=400, detail="Username is required")
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
     
-#     async with aiohttp.ClientSession() as session:
-#         profile_url = f"https://{RAPIDAPI_HOST}/v1/info"
-#         async with session.get(profile_url, headers=HEADERS, params={"username_or_id_or_url": username}) as profile_response:
-#             if profile_response.status != 200:
-#                 raise HTTPException(status_code=400, detail="Failed to fetch profile information")
-#             data = await profile_response.json()
-#             followers_count = data['data']['follower_count']
+    async with aiohttp.ClientSession() as session:
+        profile_url = f"https://{RAPIDAPI_HOST}/v1/info"
+        async with session.get(profile_url, headers=HEADERS, params={"username_or_id_or_url": username}) as profile_response:
+            if profile_response.status != 200:
+                raise HTTPException(status_code=400, detail="Failed to fetch profile information")
+            data = await profile_response.json()
+            followers_count = data['data']['follower_count']
         
-#         reels = []
-#         pagination_token = None
-#         for _ in range(10):
-#             reels_url = f"https://{RAPIDAPI_HOST}/v1.2/reels"
-#             params = {"username_or_id_or_url": username}
-#             if pagination_token:
-#                 params["pagination_token"] = pagination_token
+        reels = []
+        pagination_token = None
+        for _ in range(10):
+            reels_url = f"https://{RAPIDAPI_HOST}/v1.2/reels"
+            params = {"username_or_id_or_url": username}
+            if pagination_token:
+                params["pagination_token"] = pagination_token
 
-#             async with session.get(reels_url, headers=HEADERS, params=params) as reels_response:
-#                 if reels_response.status != 200:
-#                     break
-#                 reels_data = await reels_response.json()
-#                 reels.extend(reels_data['data']['items'])
-#                 pagination_token = reels_data.get('pagination_token')
-#                 if not pagination_token:
-#                     break
+            async with session.get(reels_url, headers=HEADERS, params=params) as reels_response:
+                if reels_response.status != 200:
+                    break
+                reels_data = await reels_response.json()
+                reels.extend(reels_data['data']['items'])
+                pagination_token = reels_data.get('pagination_token')
+                if not pagination_token:
+                    break
 
-#         if not reels:
-#             raise HTTPException(status_code=400, detail="No reels found for this account")
+        if not reels:
+            raise HTTPException(status_code=400, detail="No reels found for this account")
         
-#         views = [reel['play_count'] for reel in reels]
-#         avg_views = int(sum(views) / len(views))
-#         reels_with_10000_views = sum(1 for view in views if view > 10000)
+        views = [reel['play_count'] for reel in reels]
+        avg_views = int(sum(views) / len(views))
+        reels_with_10000_views = sum(1 for view in views if view > 10000)
 
-#         # Save to database
-#         if current_user["username"] not in db_accounts:
-#             db_accounts[current_user["username"]] = []
-#         db_accounts[current_user["username"]].append({
-#             "username": username,
-#             "followers": followers_count,
-#             "avg_views": avg_views,
-#             "reels_with_10000_views": reels_with_10000_views
-#         })
-#         return {"message": "Account added successfully"}
+        # Save to database
+        if current_user["username"] not in db_accounts:
+            db_accounts[current_user["username"]] = []
+        db_accounts[current_user["username"]].append({
+            "username": username,
+            "followers": followers_count,
+            "avg_views": avg_views,
+            "reels_with_10000_views": reels_with_10000_views
+        })
+        return {"message": "Account added successfully"}
 
-    db_accounts[current_user["username"]].append({
-        "username": username,
-        "followers": 100,
-        "avg_views": 12,
-        "reels_with_10000_views": 142
-    })
-    return {"message": "Account added successfully"}
+    # db_accounts[current_user["username"]].append({
+    #     "username": username,
+    #     "followers": 100,
+    #     "avg_views": 12,
+    #     "reels_with_10000_views": 142
+    # })
+    # return {"message": "Account added successfully"}
 
 
 @app.delete("/accounts/{ig_username}")
@@ -278,20 +278,20 @@ async def analyze_followings(request: Request, current_user: dict = Depends(get_
     username = data.get("username")
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
-    # await process_followings(username, current_user)
-    # return {"message": "Accounts analyzed successfully"}
-
-    if current_user["username"] not in db_accounts:
-        db_accounts[current_user["username"]] = []
-    
-    for i in range(10):
-        db_accounts[current_user["username"]].append({
-                "username": f"Roma_{i}",
-                "followers": 24122,
-                "avg_views": 152123,
-                "reels_with_10000_views": 12314
-            })
+    await process_followings(username, current_user)
     return {"message": "Accounts analyzed successfully"}
+
+    # if current_user["username"] not in db_accounts:
+    #     db_accounts[current_user["username"]] = []
+    
+    # for i in range(10):
+    #     db_accounts[current_user["username"]].append({
+    #             "username": f"Roma_{i}",
+    #             "followers": 24122,
+    #             "avg_views": 152123,
+    #             "reels_with_10000_views": 12314
+    #         })
+    # return {"message": "Accounts analyzed successfully"}
 
 # Frontend HTML serving
 templates = Jinja2Templates(directory="templates")
