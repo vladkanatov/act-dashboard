@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Account Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Poppins", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: rgb(231, 231, 231);
+        }
+
+        header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .heading {
+            font-size: 24px;
+            font-weight: 600;
+            color: green;
+        }
+
+        #logoutButton {
+            background-color: red;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin-top: 30px;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .title {
+            font-weight: 500;
+            font-size: 20px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .form-section {
+            margin-bottom: 20px;
+        }
+
+        .form-section input {
+            width: calc(100% - 120px);
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .form-section button {
+            background-color: rgb(255, 146, 91);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        table th {
+            background-color: rgb(240, 240, 240);
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-danger {
+            background-color: red;
+            color: #fff;
+        }
+
+        .btn-primary {
+            background-color: rgb(91, 146, 255);
+            color: #fff;
+        }
+
+        .btn-success {
+            background-color: rgb(91, 255, 91);
+            color: #fff;
+        }
+
+        .message-form {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .message-form textarea {
+            width: calc(100% - 120px);
+            padding: 10px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .message-form button {
+            background-color: rgb(255, 146, 91);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .toggle-message-form-button {
+            background-color: rgb(91, 146, 255);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        /* Responsive Design */
+        @media screen and (max-width: 768px) {
+            .form-section input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+
+            .form-section button {
+                width: 100%;
+            }
+
+            table th, table td {
+                font-size: 12px;
+                padding: 5px;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            .heading {
+                font-size: 18px;
+            }
+
+            #logoutButton {
+                padding: 8px 15px;
+                font-size: 14px;
+            }
+
+            .title {
+                font-size: 16px;
+            }
+
+            table {
+                font-size: 12px;
+            }
+
+            .btn {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="heading">Instagram Account Manager</div>
+        <button id="logoutButton">Выйти</button>
+    </header>
+
+    <div class="container">
+        <div class="form-section">
+            <h3 class="title">Добавить аккаунт</h3>
+            <form id="addAccountForm">
+                <input type="text" id="usernameInput" placeholder="Instagram Username">
+                <button type="submit">Добавить</button>
+            </form>
+        </div>
+
+        <div id="accountList">
+            <h3 class="title">Таблица аккаунтов</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Followers</th>
+                        <th>Avg Views</th>
+                        <th>Reels with >10K Views</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="accountsTableBody">
+                    <!-- Rows dynamically populated -->
+                </tbody>
+            </table>
+        </div>
+        <button id="toggleMessageFormButton" class="toggle-message-form-button">Сохранить сообщение</button>
+        <div class="message-form" id="messageForm">
+            <textarea id="messageInput" placeholder="Введите ваше сообщение"></textarea>
+            <button id="sendMessageButton">Принять</button>
+        </div>
+    </div>
+    <script>
+        document.getElementById('addAccountForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const username = document.getElementById('usernameInput').value;
+            
+            const response = await fetch('/accounts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'token': localStorage.getItem('access_token')
+                },
+                body: JSON.stringify({ username })
+            });
+    
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert(result.message);
+                // Обновить список аккаунтов без перезагрузки страницы
+                // Например, можно вызвать функцию для обновления списка аккаунтов
+                updateAccountList();
+            } else {
+                alert(result.error || 'Ошибка при добавлении аккаунта');
+            }
+        });
+    
+    
+        async function deleteAccount(username) {
+            if (!confirm(`Are you sure you want to delete ${username}?`)) {
+                return;
+            }
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = fetch(`/accounts/${username}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+
+                updateAccountList();
+                
+            } catch (error) {
+                alert((error.response && error.response.message) || 'Failed to delete account');
+            }
+        }
+    
+        function addFollowing(username) {
+            if (!confirm(`Are you sure you want to add followings for ${username}?`)) {
+                return;
+            }
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = fetch('/analyze_followings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    },
+                    body: JSON.stringify({ username })
+                });
+                
+                updateAccountList();
+            } catch (error) {
+                alert(error.response.data.error || 'Failed to add followings');
+            }
+        }
+    
+        async function updateAccountList() {
+            const response = await fetch('/accounts', {
+                headers: {
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            const accounts = await response.json();
+            
+            const accountsTableBody = document.querySelector('#accountsTableBody');
+            accountsTableBody.innerHTML = ''; // Очистить текущий список
+        
+            accounts.forEach(account => {
+                const row = document.createElement('tr');
+                
+                row.innerHTML = `
+                    <td><a href="https://www.instagram.com/${account.username}" target="_blank">${account.username}</a></td>
+                    <td>${account.followers}</td>
+                    <td>${account.avg_views}</td>
+                    <td>${account.reels_with_10000_views}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm delete-account" onclick="deleteAccount('${account.username}')">Delete</button>
+                        <button class="btn btn-primary btn-sm send-message" onclick="sendMessage('${account.username}')">Отправить сообщение</button>
+                        <button class="btn btn-success btn-sm add-following" onclick="addFollowing('${account.username}')">Добавить Followings</button>
+                    </td>
+                `;
+                
+                accountsTableBody.appendChild(row);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", updateAccountList)
+    
+        let lastMessage = "";
+
+        // Переключение видимости формы сообщения
+        document.getElementById('toggleMessageFormButton').addEventListener('click', () => {
+            const messageForm = document.getElementById('messageForm');
+            if (messageForm.style.display === 'none' || messageForm.style.display === '') {
+                messageForm.style.display = 'block';
+            } else {
+                messageForm.style.display = 'none';
+            }
+        });
+
+        // Обработка отправки сообщения
+        document.getElementById('sendMessageButton').addEventListener('click', () => {
+            const message = document.getElementById('messageInput').value;
+            if (message.trim() === '') {
+                alert('Сообщение не может быть пустым.');
+                return;
+            }
+
+            // Сохранение сообщения в переменную
+            lastMessage = message;
+
+            // Скрыть форму после отправки сообщения
+            document.getElementById('messageForm').style.display = 'none';
+            alert('Сообщение сохранено: ' + lastMessage);
+        });
+
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            // Удаление токена из localStorage
+            localStorage.removeItem('access_token');
+            // Перенаправление на страницу входа
+            window.location.href = '/';
+        });
+
+        function sendMessage(username) {
+            navigator.clipboard.writeText(lastMessage).then(() => {
+                window.open(`https://ig.me/m/${username}`, '_blank');
+            }).catch(err => {
+                console.error('Ошибка копирования в буфер обмена: ', err);
+            });
+        }
+
+    </script>
+</body>
+</html>
