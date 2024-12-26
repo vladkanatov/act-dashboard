@@ -156,6 +156,46 @@
             margin-top: 20px;
         }
 
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        
+        .spinner {
+            border: 16px solid #f3f3f3;
+            border-top: 16px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         /* Responsive Design */
         @media screen and (max-width: 768px) {
             .form-section input {
@@ -209,7 +249,10 @@
             <h3 class="title">Добавить аккаунт</h3>
             <form id="addAccountForm">
                 <input type="text" id="usernameInput" placeholder="Instagram Username">
-                <button type="submit">Добавить</button>
+                <button type="submit">
+                    Добавить
+                    <div class="loader" id="addAccountLoader" style="display: none;"></div>
+                </button>
             </form>
         </div>
 
@@ -241,25 +284,35 @@
             event.preventDefault();
             
             const username = document.getElementById('usernameInput').value;
+            const addAccountLoader = document.getElementById('addAccountLoader');
             
-            const response = await fetch('/accounts', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': localStorage.getItem('access_token')
-                },
-                body: JSON.stringify({ username })
-            });
-    
-            const result = await response.json();
-            
-            if (response.ok) {
-                alert(result.message);
-                // Обновить список аккаунтов без перезагрузки страницы
-                // Например, можно вызвать функцию для обновления списка аккаунтов
-                updateAccountList();
-            } else {
-                alert(result.error || 'Ошибка при добавлении аккаунта');
+            addAccountLoader.style.display = 'inline-block';
+
+            try {
+                const response = await fetch('/accounts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ username })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message);
+                    // Обновить список аккаунтов без перезагрузки страницы
+                    // Например, можно вызвать функцию для обновления списка аккаунтов
+                    updateAccountList();
+                } else {
+                    alert(result.error || 'Ошибка при добавлении аккаунта');
+                }
+            } catch (error) {
+                alert('Ошибка при добавлении аккаунта', error);
+                console.error(error);
+            } finally {
+                addAccountLoader.style.display = 'none';
             }
         });
     
@@ -285,13 +338,17 @@
             }
         }
     
-        function addFollowing(username) {
+        async function addFollowing(username) {
             if (!confirm(`Are you sure you want to add followings for ${username}?`)) {
                 return;
             }
+            const addFollowingLoader = document.getElementById(`addFollowingLoader-${username}`);
+
+            addFollowingLoader.style.display = 'inline-block';
+
             try {
                 const token = localStorage.getItem('access_token');
-                const response = fetch('/analyze_followings', {
+                const response = await fetch('/analyze_followings', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -302,7 +359,10 @@
                 
                 updateAccountList();
             } catch (error) {
-                alert(error.response.data.error || 'Failed to add followings');
+                alert('Failed to add followings: ', error);
+                console.error(error);
+            } finally {
+                addFollowingLoader.style.display = 'none';
             }
         }
     
@@ -328,7 +388,10 @@
                     <td>
                         <button class="btn btn-danger btn-sm delete-account" onclick="deleteAccount('${account.username}')">Delete</button>
                         <button class="btn btn-primary btn-sm send-message" onclick="sendMessage('${account.username}')">Отправить сообщение</button>
-                        <button class="btn btn-success btn-sm add-following" onclick="addFollowing('${account.username}')">Добавить Followings</button>
+                        <button class="btn btn-success btn-sm add-following" onclick="addFollowing('${account.username}')">
+                            Добавить Followings
+                            <div class="loader" id="addFollowingLoader-${account.username}" style="display: none;"></div>
+                        </button>
                     </td>
                 `;
                 
