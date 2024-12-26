@@ -167,6 +167,10 @@
             margin-left: 10px;
             vertical-align: middle;
         }
+
+        .viewed {
+            background-color: #e0ffe0; /* Светло-зеленый цвет для просмотренных аккаунтов */
+        }
         
         button {
             display: flex;
@@ -280,6 +284,7 @@
         </div>
     </div>
     <script>
+        document.addEventListener("DOMContentLoaded", updateAccountList)
         document.getElementById('addAccountForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             
@@ -379,9 +384,10 @@
         
             accounts.forEach(account => {
                 const row = document.createElement('tr');
-                
+                const isViewed = localStorage.getItem(`viewed_${account.username}`) === 'true';
+        
                 row.innerHTML = `
-                    <td><a href="https://www.instagram.com/${account.username}" target="_blank">${account.username}</a></td>
+                    <td><a href="https://www.instagram.com/${account.username}" target="_blank" onclick="markAsViewed('${account.username}', this)">${account.username}</a></td>
                     <td>${account.followers}</td>
                     <td>${account.avg_views}</td>
                     <td>${account.reels_with_10000_views}</td>
@@ -394,12 +400,20 @@
                         </button>
                     </td>
                 `;
-                
+        
+                if (isViewed) {
+                    row.classList.add('viewed');
+                }
+        
                 accountsTableBody.insertBefore(row, accountsTableBody.firstChild);
             });
         }
 
-        document.addEventListener("DOMContentLoaded", updateAccountList)
+        function markAsViewed(username, linkElement) {
+            localStorage.setItem(`viewed_${username}`, 'true');
+            const row = linkElement.closest('tr');
+            row.classList.add('viewed');
+        }
     
         let lastMessage = "";
 
