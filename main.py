@@ -38,6 +38,7 @@ HEADERS = {
 # In-memory database simulation
 db_users = {}
 db_accounts = {}
+db_blacklist = {}
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -66,6 +67,9 @@ class InstagramAccount(BaseModel):
     reels_with_10000_views: int
 
 class TokenData(BaseModel):
+    username: str
+
+class BlacklistAccount(BaseModel):
     username: str
 
 # Dependency
@@ -116,6 +120,26 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(data={"sub": user["username"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
+@app.get("/blacklist", response_model=List[BlacklistAccount])
+def get_blacklist(current_user: dict = Depends(get_current_user)):
+    return db_blacklist.get(current_user["username"], [])
+
+@app.post("/blacklist")
+def add_to_blacklist(account: BlacklistAccount, current_user: dict = Depends(get_current_user)):
+    if current_user["username"] not in db_blacklist:
+        db_blacklist[current_user["username"]] = []
+    db_blacklist[current_user["username"]].append(account)
+    return {"message": "Account added to blacklist"}
+
+@app.delete("/blacklist/{username}")
+def remove_from_blacklist(username: str, current_user: dict = Depends(get_current_user)):
+    if current_user["username"] not in db_blacklist:
+        raise HTTPException(status_code=404, detail="No blacklist found")
+    db_blacklist[current_user["username"]] = [
+        acc for acc in db_blacklist[current_user["username"]] if acc['username'] != username
+    ]
+    return {"message": "Account removed from blacklist"}
+
 @app.get("/accounts", response_model=List[InstagramAccount])
 def get_accounts(current_user: dict = Depends(get_current_user)):
     return db_accounts.get(current_user["username"], [])
@@ -127,6 +151,9 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
+    
+    if username in db_blacklist.get(current_user["username"], []):
+        raise HTTPException(status_code=400, detail="Account is blacklisted")
     
     async with aiohttp.ClientSession() as session:
         profile_url = f"https://{RAPIDAPI_HOST}/v1/info"
@@ -188,6 +215,10 @@ def delete_account(ig_username: str, current_user: dict = Depends(get_current_us
     db_accounts[username] = [
         acc for acc in db_accounts[username] if acc['username'] != ig_username
     ]
+    
+    if username not in db_blacklist:
+        db_blacklist[username] = []
+    db_blacklist[username].append({"username": ig_username})
     return {"message": "Account deleted successfully"}
 
 async def fetch_followings(session, username):
@@ -219,6 +250,10 @@ async def fetch_reels(session, user_id, max_pages=3):
     return reels
 
 async def process_followings(username, current_user):
+    
+    if username in db_blacklist.get(current_user["username"], []):
+        raise HTTPException(status_code=400, detail="Account is blacklisted")
+    
     async with aiohttp.ClientSession() as session:
         # Получаем список followings
         followings_data = await fetch_followings(session, username)
@@ -235,6 +270,7 @@ async def process_user(session, user_id):
     # Получаем профиль пользователя
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
+    
     followers_count = profile_data['data']['follower_count']
 
     # Получаем рилсы
