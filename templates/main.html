@@ -236,6 +236,20 @@
             height: 120px;
             animation: spin 2s linear infinite;
         }
+
+        .scroll-to-top-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgb(91, 146, 255);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: none; /* Скрыта по умолчанию */
+            z-index: 1000;
+        }
         
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -351,6 +365,7 @@
             </div>
         </div>
     </div>
+    <button id="scrollToTopButton" class="scroll-to-top-button" onclick="scrollToTop()">Наверх</button>
     
     <script>
 
@@ -607,6 +622,20 @@
             }).catch(err => {
                 console.error('Ошибка копирования в буфер обмена: ', err);
             });
+        }
+
+        window.onscroll = function() {
+            const scrollToTopButton = document.getElementById('scrollToTopButton');
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                scrollToTopButton.style.display = 'block';
+            } else {
+                scrollToTopButton.style.display = 'none';
+            }
+        };
+    
+        // Прокрутка наверх
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
     </script>
