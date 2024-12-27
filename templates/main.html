@@ -47,15 +47,57 @@
             cursor: pointer;
         }
 
-        .container {
+        .tabs-container {
             width: 90%;
             max-width: 1200px;
-            margin-top: 30px;
+            margin-top: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: flex-start;
+            border-bottom: 2px solid #ddd;
+        }
+        
+        .tab-button {
+            background-color: #f1f1f1;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin: 0 5px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            border-bottom: 2px solid transparent;
+            transition: background-color 0.3s, border-bottom 0.3s;
+        }
+        
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+        
+        .tab-button.active {
+            background-color: #fff;
+            border-bottom: 2px solid #3498db;
+            font-weight: bold;
+        }
+        
+        .tab-content {
+            display: none;
+            width: 100%;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .container {
+            width: 100%;
             background-color: #fff;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
             overflow: hidden;
             padding: 20px;
+            margin-top: -2px; /* Чтобы контейнер был "присоединен" к вкладкам */
         }
 
         .title {
@@ -248,43 +290,152 @@
         <button id="logoutButton">Выйти</button>
     </header>
 
-    <div class="container">
-        <div class="form-section">
-            <h3 class="title">Добавить аккаунт</h3>
-            <form id="addAccountForm">
-                <input type="text" id="usernameInput" placeholder="Instagram Username">
-                <button type="submit">
-                    Добавить
-                    <div class="loader" id="addAccountLoader" style="display: none;"></div>
-                </button>
-            </form>
+    <div class="tabs-container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('parsingTab', this)">Парсинг</button>
+            <button class="tab-button" onclick="showTab('blacklistTab', this)">Черный список</button>
         </div>
 
-        <div id="accountList">
-            <h3 class="title">Таблица аккаунтов</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Followers</th>
-                        <th>Avg Views</th>
-                        <th>Reels with >10K Views</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="accountsTableBody">
-                    <!-- Rows dynamically populated -->
-                </tbody>
-            </table>
+        <div id="parsingTab" class="tab-content active">
+            <div class="container">
+                <div class="form-section">
+                    <h3 class="title">Добавить аккаунт</h3>
+                    <form id="addAccountForm">
+                        <input type="text" id="usernameInput" placeholder="Instagram Username">
+                        <button type="submit">
+                            Добавить
+                            <div class="loader" id="addAccountLoader" style="display: none;"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <div id="accountList">
+                    <h3 class="title">Таблица аккаунтов</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Followers</th>
+                                <th>Avg Views</th>
+                                <th>Reels with >10K Views</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsTableBody">
+                            <!-- Rows dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <button id="toggleMessageFormButton" class="toggle-message-form-button">Сохранить сообщение</button>
+                <div class="message-form" id="messageForm">
+                    <textarea id="messageInput" placeholder="Введите ваше сообщение"></textarea>
+                    <button id="sendMessageButton">Принять</button>
+                </div>
+            </div>
         </div>
-        <button id="toggleMessageFormButton" class="toggle-message-form-button">Сохранить сообщение</button>
-        <div class="message-form" id="messageForm">
-            <textarea id="messageInput" placeholder="Введите ваше сообщение"></textarea>
-            <button id="sendMessageButton">Принять</button>
+
+        <div id="blacklistTab" class="tab-content">
+            <div class="container">
+                <h3 class="title">Черный список</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blacklistTableBody">
+                        <!-- Rows dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+    
     <script>
-        document.addEventListener("DOMContentLoaded", updateAccountList)
+
+        function showTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+        
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            if (tabId === 'blacklistTab') {
+                updateBlacklist();
+            } else if (tabId === 'parsingTab') {
+                updateAccountList();
+            }
+        }
+        
+
+        document.addEventListener("DOMContentLoaded", () => {
+            updateAccountList();
+            updateBlacklist();
+        });
+
+        async function updateBlacklist() {
+            const response = await fetch('/blacklist', {
+                headers: {
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            const blacklist = await response.json();
+            
+            const blacklistTableBody = document.querySelector('#blacklistTableBody');
+            blacklistTableBody.innerHTML = ''; // Очистить текущий список
+        
+            blacklist.forEach(account => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><a href="https://www.instagram.com/${account.username}" target="_blank">${account.username}</a></td>
+                    <td>
+                        <button class="btn btn-danger btn-sm" onclick="removeFromBlacklist('${account.username}')">Remove</button>
+                    </td>
+                `;
+                blacklistTableBody.appendChild(row);
+            });
+        }
+
+        async function removeFromBlacklist(username) {
+            const response = await fetch(`/blacklist/${username}`, {
+                method: 'DELETE',
+                headers: {
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            const result = await response.json();
+            alert(result.message);
+            updateBlacklist();
+        }
+
+        async function deleteAccount(username) {
+            if (!confirm(`Are you sure you want to delete ${username}?`)) {
+                return;
+            }
+            try {
+                const token = localStorage.getItem('access_token');
+                const response = await fetch(`/accounts/${username}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': token
+                    }
+                });
+        
+                const result = await response.json();
+                alert(result.message);
+                updateAccountList();
+                updateBlacklist();
+            } catch (error) {
+                alert((error.response && error.response.message) || 'Failed to delete account');
+            }
+        }
+
         document.getElementById('addAccountForm').addEventListener('submit', async (event) => {
             event.preventDefault();
             
