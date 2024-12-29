@@ -39,6 +39,9 @@ HEADERS = {
 db_users = {}
 db_accounts = {}
 db_blacklist = {}
+db_integration_pending = {}
+db_integration = {}
+
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -120,6 +123,43 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(data={"sub": user["username"]})
     return {"access_token": access_token, "token_type": "bearer"}
 
+@app.get("/integration_pending", response_model=List[InstagramAccount])
+def get_integration_pending(current_user: dict = Depends(get_current_user)):
+    return db_integration_pending.get(current_user["username"], [])
+
+@app.post("/move_to_integration_pending/{username}")
+def move_to_integration_pending(username: str, current_user: dict = Depends(get_current_user)):
+    user = current_user["username"]
+    if user not in db_integration_pending:
+        db_integration_pending[user] = []
+    account = next((acc for acc in db_accounts[user] if acc["username"] == username), None)
+    if account:
+        db_integration_pending[user].append(account)
+        db_accounts[user] = [acc for acc in db_accounts[user] if acc["username"] != username]
+    return {"message": "Account moved to integration pending"}
+
+@app.delete("/remove_from_integration_pending/{username}")
+def remove_from_integration_pending(username: str, current_user: dict = Depends(get_current_user)):
+    user = current_user["username"]
+    if user in db_integration_pending:
+        db_integration_pending[user] = [acc for acc in db_integration_pending[user] if acc["username"] != username]
+    return {"message": "Account removed from integration pending"}
+
+@app.get("/integration", response_model=List[InstagramAccount])
+def get_integration(current_user: dict = Depends(get_current_user)):
+    return db_integration.get(current_user["username"], [])
+
+@app.post("/move_to_integration/{username}")
+def move_to_integration(username: str, current_user: dict = Depends(get_current_user)):
+    user = current_user["username"]
+    if user not in db_integration:
+        db_integration[user] = []
+    account = next((acc for acc in db_integration_pending[user] if acc["username"] == username), None)
+    if account:
+        db_integration[user].append(account)
+        db_integration_pending[user] = [acc for acc in db_integration_pending[user] if acc["username"] != username]
+    return {"message": "Account moved to integration"}
+
 @app.get("/blacklist", response_model=List[BlacklistAccount])
 def get_blacklist(current_user: dict = Depends(get_current_user)):
     return db_blacklist.get(current_user["username"], [])
@@ -148,6 +188,7 @@ def get_accounts(current_user: dict = Depends(get_current_user)):
 async def add_account(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
     username = data.get("username")
+    engagement = data.get("engagement")
     
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
@@ -175,21 +216,31 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
                 if reels_response.status != 200:
                     break
                 reels_data = await reels_response.json()
+                
                 reels.extend(reels_data['data']['items'])
                 pagination_token = reels_data.get('pagination_token')
                 if not pagination_token:
                     break
+        
+        for reel in reels:
+            if not engagement:
+                break
 
+            engagement_rate = (reel['like_count'] + reel['comment_count']) / followers_count
+            if engagement_rate < engagement:
+                reels.remove(reel)
+        
         if not reels:
             raise HTTPException(status_code=400, detail="No reels found for this account")
         
-        views = [reel['play_count'] for reel in reels]
+        views = [reel['play_count'] for reel in reels if 'play_count' in reel]
         avg_views = int(sum(views) / len(views))
         reels_with_10000_views = sum(1 for view in views if view > 10000)
 
         # Save to database
         if current_user["username"] not in db_accounts:
             db_accounts[current_user["username"]] = []
+            
         db_accounts[current_user["username"]].append({
             "username": username,
             "followers": followers_count,
@@ -249,7 +300,7 @@ async def fetch_reels(session, user_id, max_pages=3):
                 break
     return reels
 
-async def process_followings(username, current_user):
+async def process_followings(username, current_user, engagement):
     
     if username in db_blacklist.get(current_user["username"], []):
         raise HTTPException(status_code=400, detail="Account is blacklisted")
@@ -261,12 +312,12 @@ async def process_followings(username, current_user):
 
         tasks = []
         for user_id in followings:
-            tasks.append(process_user(session, user_id))
+            tasks.append(process_user(session, user_id, engagement))
         results = await asyncio.gather(*tasks)
 
         save_to_db(results, current_user["username"])
 
-async def process_user(session, user_id):
+async def process_user(session, user_id, engagement):
     # Получаем профиль пользователя
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
@@ -275,12 +326,23 @@ async def process_user(session, user_id):
 
     # Получаем рилсы
     reels = await fetch_reels(session, user_id)
+    del reels[:2]
+    
+    for reel in reels:
+        if not engagement:
+            break
+        
+        engagement_rate = (reel['like_count'] + reel['comment_count']) / followers_count
+        if engagement_rate < engagement:
+            reels.remove(reel)
+
+    
     views = [reel['play_count'] for reel in reels if 'play_count' in reel]
     avg_views = int(sum(views) / len(views)) if views else 0
     reels_with_10000_views = sum(1 for view in views if view > 10000)
 
-    # Проверяем критерии
-    if avg_views < 3000 or reels_with_10000_views < 3:
+    median_views = sorted(views)[len(views) // 2] if views else 0
+    if median_views < 3000 or reels_with_10000_views < 3:
         return None
 
     return (username, followers_count, avg_views, reels_with_10000_views)
@@ -311,10 +373,11 @@ def save_to_db(results, username):
 @app.post("/analyze_followings")
 async def analyze_followings(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
+    engagement = data.get("engagement")
     username = data.get("username")
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
-    await process_followings(username, current_user)
+    await process_followings(username, current_user, engagement)
     return {"message": "Accounts analyzed successfully"}
 
     # if current_user["username"] not in db_accounts:
