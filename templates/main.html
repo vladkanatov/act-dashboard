@@ -307,6 +307,8 @@
     <div class="tabs-container">
         <div class="tabs">
             <button class="tab-button active" onclick="showTab('parsingTab', this)">Парсинг</button>
+            <button class="tab-button" onclick="showTab('integrationPendingTab', this)">Ожидает интеграции</button>
+            <button class="tab-button" onclick="showTab('integrationTab', this)">Интеграция</button>
             <button class="tab-button" onclick="showTab('blacklistTab', this)">Черный список</button>
         </div>
 
@@ -316,6 +318,7 @@
                     <h3 class="title">Добавить аккаунт</h3>
                     <form id="addAccountForm">
                         <input type="text" id="usernameInput" placeholder="Instagram Username">
+                        <input type="number" id="engagementRateInput" placeholder="Минимальный коэффициент вовлеченности (%)" step="0.01">
                         <button type="submit">
                             Добавить
                             <div class="loader" id="addAccountLoader" style="display: none;"></div>
@@ -345,6 +348,45 @@
                     <textarea id="messageInput" placeholder="Введите ваше сообщение"></textarea>
                     <button id="sendMessageButton">Принять</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="integrationPendingTab" class="tab-content">
+            <div class="container">
+                <h3 class="title">Ожидает интеграции</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Followers</th>
+                            <th>Avg Views</th>
+                            <th>Reels with >10K Views</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="integrationPendingTableBody">
+                        <!-- Rows dynamically populated -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    
+        <div id="integrationTab" class="tab-content">
+            <div class="container">
+                <h3 class="title">Интеграция</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Followers</th>
+                            <th>Avg Views</th>
+                            <th>Reels with >10K Views</th>
+                        </tr>
+                    </thead>
+                    <tbody id="integrationTableBody">
+                        <!-- Rows dynamically populated -->
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -390,6 +432,8 @@
 
         document.addEventListener("DOMContentLoaded", () => {
             updateAccountList();
+            updateIntegrationPendingList();
+            updateIntegrationList();
             updateBlacklist();
         });
 
@@ -455,6 +499,7 @@
             event.preventDefault();
             
             const username = document.getElementById('usernameInput').value;
+            const engagement = document.getElementById('engagementRateInput').value
             const addAccountLoader = document.getElementById('addAccountLoader');
             
             addAccountLoader.style.display = 'inline-block';
@@ -466,7 +511,7 @@
                         'Content-Type': 'application/json',
                         'token': localStorage.getItem('access_token')
                     },
-                    body: JSON.stringify({ username })
+                    body: JSON.stringify({ username, engagement })
                 });
                 
                 const result = await response.json();
@@ -575,6 +620,56 @@
             });
         }
 
+        async function updateIntegrationPendingList() {
+            const response = await fetch('/integration_pending', {
+                headers: {
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            const accounts = await response.json();
+            
+            const tableBody = document.querySelector('#integrationPendingTableBody');
+            tableBody.innerHTML = ''; // Очистить текущий список
+        
+            accounts.forEach(account => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${account.username}</td>
+                    <td>${account.followers}</td>
+                    <td>${account.avg_views}</td>
+                    <td>${account.reels_with_10000_views}</td>
+                    <td>
+                        <button class="btn btn-success btn-sm" onclick="completeDeal('${account.username}')">Сделка совершена</button>
+                        <button class="btn btn-danger btn-sm" onclick="removeFromIntegrationPending('${account.username}')">Сделка не состоялась</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function updateIntegrationList() {
+            const response = await fetch('/integration', {
+                headers: {
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            const accounts = await response.json();
+            
+            const tableBody = document.querySelector('#integrationTableBody');
+            tableBody.innerHTML = ''; // Очистить текущий список
+        
+            accounts.forEach(account => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${account.username}</td>
+                    <td>${account.followers}</td>
+                    <td>${account.avg_views}</td>
+                    <td>${account.reels_with_10000_views}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
         function markAsViewed(username, linkElement) {
             localStorage.setItem(`viewed_${username}`, 'true');
             const row = linkElement.closest('tr');
@@ -616,14 +711,46 @@
             window.location.href = '/';
         });
 
-        function sendMessage(username) {
-            navigator.clipboard.writeText(lastMessage).then(() => {
+        async function sendMessage(username) {
+            navigator.clipboard.writeText(lastMessage).then(async () => {
                 window.open(`https://ig.me/m/${username}`, '_blank');
+                await fetch(`/move_to_integration_pending/${username}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': localStorage.getItem('access_token')
+                    }
+                });
+                updateAccountList();
+                updateIntegrationPendingList();
             }).catch(err => {
                 console.error('Ошибка копирования в буфер обмена: ', err);
             });
         }
 
+        async function completeDeal(username) {
+            await fetch(`/move_to_integration/${username}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            updateIntegrationPendingList();
+            updateIntegrationList();
+        }
+
+        async function removeFromIntegrationPending(username) {
+            await fetch(`/remove_from_integration_pending/${username}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'token': localStorage.getItem('access_token')
+                }
+            });
+            updateIntegrationPendingList();
+        }
+        
         window.onscroll = function() {
             const scrollToTopButton = document.getElementById('scrollToTopButton');
             if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
