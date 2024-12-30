@@ -559,7 +559,8 @@
                 return;
             }
             const addFollowingLoader = document.getElementById(`addFollowingLoader-${username}`);
-
+            const engagement = document.getElementById('engagementRateInput').value
+            
             addFollowingLoader.style.display = 'inline-block';
 
             try {
@@ -570,7 +571,7 @@
                         'Content-Type': 'application/json',
                         'token': token
                     },
-                    body: JSON.stringify({ username })
+                    body: JSON.stringify({ username, engagement })
                 });
                 
                 updateAccountList();
