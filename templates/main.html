@@ -572,6 +572,7 @@
                 const viewsInput = row.querySelector('.integration-views-input');
                 const likesInput = row.querySelector('.integration-likes-input');
                 const commentsInput = row.querySelector('.integration-comments-input');
+                const username = row.querySelector('.integration-username-input').value;
         
                 if (url) {
                     try {
@@ -581,7 +582,7 @@
                                 'Content-Type': 'application/json',
                                 'token': localStorage.getItem('access_token')
                             },
-                            body: JSON.stringify({ url })
+                            body: JSON.stringify({ url, username })
                         });
                         const data = await response.json();
                         if (response.ok) {

@@ -220,7 +220,7 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
     
-    if username in db_blacklist.get(current_user["username"], []):
+    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
         raise HTTPException(status_code=400, detail="Account is blacklisted")
     
     async with aiohttp.ClientSession() as session:
@@ -274,13 +274,13 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
         })
         return {"message": "Account added successfully"}
 
-    db_accounts[current_user["username"]].append({
-        "username": username,
-        "followers": 100,
-        "avg_views": 12,
-        "reels_with_10000_views": 142
-    })
-    return {"message": "Account added successfully"}
+    # db_accounts[current_user["username"]].append({
+    #     "username": username,
+    #     "followers": 100,
+    #     "avg_views": 12,
+    #     "reels_with_10000_views": 142
+    # })
+    # return {"message": "Account added successfully"}
 
 
 @app.delete("/accounts/{ig_username}")
@@ -327,9 +327,6 @@ async def fetch_reels(session, user_id, max_pages=3):
 
 async def process_followings(username, current_user, engagement):
     
-    if username in db_blacklist.get(current_user["username"], []):
-        raise HTTPException(status_code=400, detail="Account is blacklisted")
-    
     async with aiohttp.ClientSession() as session:
         # Получаем список followings
         followings_data = await fetch_followings(session, username)
@@ -337,15 +334,18 @@ async def process_followings(username, current_user, engagement):
 
         tasks = []
         for user_id in followings:
-            tasks.append(process_user(session, user_id, engagement))
+            tasks.append(process_user(session, user_id, engagement, current_user))
         results = await asyncio.gather(*tasks)
 
         save_to_db(results, current_user["username"])
 
-async def process_user(session, user_id, engagement):
+async def process_user(session, user_id, engagement, current_user):
     # Получаем профиль пользователя
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
+    
+    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
+        return
     
     followers_count = profile_data['data']['follower_count']
 
@@ -361,7 +361,7 @@ async def process_user(session, user_id, engagement):
         engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
         median_engagement = sorted(engagements)[len(engagements) // 2] if engagements else 0
         if median_engagement < int(engagement):
-            return HTTPException(status_code=400, detail="Engagement is too low")
+            return
 
     return (username, followers_count, avg_views, reels_with_10000_views)
 
@@ -390,48 +390,75 @@ def save_to_db(results, username):
 
 @app.post("/analyze_followings")
 async def analyze_followings(request: Request, current_user: dict = Depends(get_current_user)):
-    # data = await request.json()
-    # engagement = data.get("engagement")
-    # username = data.get("username")
-    # if not username:
-    #     raise HTTPException(status_code=400, detail="Username is required")
-    # await process_followings(username, current_user, engagement)
-    # return {"message": "Accounts analyzed successfully"}
-
-    if current_user["username"] not in db_accounts:
-        db_accounts[current_user["username"]] = []
-    
-    for i in range(10):
-        db_accounts[current_user["username"]].append({
-                "username": f"Roma_{i}",
-                "followers": 24122,
-                "avg_views": 152123,
-                "reels_with_10000_views": 12314
-            })
+    data = await request.json()
+    engagement = data.get("engagement")
+    username = data.get("username")
+    if not username:
+        raise HTTPException(status_code=400, detail="Username is required")
+    await process_followings(username, current_user, engagement)
     return {"message": "Accounts analyzed successfully"}
+
+    # if current_user["username"] not in db_accounts:
+    #     db_accounts[current_user["username"]] = []
+    
+    # for i in range(10):
+    #     db_accounts[current_user["username"]].append({
+    #             "username": f"Roma_{i}",
+    #             "followers": 24122,
+    #             "avg_views": 152123,
+    #             "reels_with_10000_views": 12314
+    #         })
+    # return {"message": "Accounts analyzed successfully"}
 
 @app.post("/fetch_reels_data")
 async def fetch_reels_data(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
-    url = data.get("url")
+    url = data.get('url')
+    username = data.get('username')
+    reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
     
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
     
+    params = {"code_or_id_or_url": url}
+    
     # Здесь добавьте логику для получения данных о рилсе по URL
     # Например, используйте aiohttp для выполнения запроса к API Instagram
     async with aiohttp.ClientSession() as session:
-        async with session.get(url, headers=HEADERS) as response:
+        async with session.get(reels_url, headers=HEADERS, params=params) as response:
             if response.status != 200:
                 raise HTTPException(status_code=response.status, detail="Failed to fetch reels data")
-            reels_data = await response.json()['data']['metrics']
-    
+            reels_data_json = await response.json()
+            reels_data = reels_data_json['data']['metrics']
+            
     # Пример данных, которые могут быть возвращены
     data = {
         "views": reels_data.get("play_count", 0),
         "likes": reels_data.get("like_count", 0),
         "comments": reels_data.get("comment_count", 0)
     }
+    
+    # Ensure the integration table exists for the current user
+    if current_user["username"] not in db_integration:
+        db_integration[current_user["username"]] = []
+    
+    # Find the account by username and update its information
+    account = next((acc for acc in db_integration[current_user["username"]] if acc["username"] == username), None)
+    if account:
+        account.update({
+            "reels_url": url,
+            "views": data["views"],
+            "likes": data["likes"],
+            "comments": data["comments"]
+        })
+    else:
+        db_integration[current_user["username"]].append({
+            "username": username,
+            "reels_url": url,
+            "views": data["views"],
+            "likes": data["likes"],
+            "comments": data["comments"]
+        })
     
     return data
 
