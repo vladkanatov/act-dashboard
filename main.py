@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from passlib.context import CryptContext
 import uvicorn
 import jwt
@@ -68,6 +68,13 @@ class InstagramAccount(BaseModel):
     followers: int
     avg_views: int
     reels_with_10000_views: int
+    
+class IntegrationAccout(BaseModel):
+    username: str
+    reels_url: Optional[str] = None
+    views: Optional[int] = None
+    likes: Optional[int] = None
+    comments: Optional[int] = None
 
 class TokenData(BaseModel):
     username: str
@@ -145,7 +152,7 @@ def remove_from_integration_pending(username: str, current_user: dict = Depends(
         db_integration_pending[user] = [acc for acc in db_integration_pending[user] if acc["username"] != username]
     return {"message": "Account removed from integration pending"}
 
-@app.get("/integration", response_model=List[InstagramAccount])
+@app.get("/integration", response_model=List[IntegrationAccout])
 def get_integration(current_user: dict = Depends(get_current_user)):
     return db_integration.get(current_user["username"], [])
 
@@ -156,7 +163,7 @@ def move_to_integration(username: str, current_user: dict = Depends(get_current_
         db_integration[user] = []
     account = next((acc for acc in db_integration_pending[user] if acc["username"] == username), None)
     if account:
-        db_integration[user].append(account)
+        db_integration[user].append({"username": account["username"]})
         db_integration_pending[user] = [acc for acc in db_integration_pending[user] if acc["username"] != username]
     return {"message": "Account moved to integration"}
 
@@ -180,6 +187,26 @@ def remove_from_blacklist(username: str, current_user: dict = Depends(get_curren
     ]
     return {"message": "Account removed from blacklist"}
 
+@app.post("/blacklist/multiple", response_model=List[BlacklistAccount])
+async def add_multiple_to_blacklist(request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    usernames = data.get("usernames", [])
+    
+    if not usernames:
+        raise HTTPException(status_code=400, detail="Usernames are required")
+    
+    if current_user["username"] not in db_blacklist:
+        db_blacklist[current_user["username"]] = []
+
+    added_accounts = []
+    for username in usernames:
+        if username not in db_blacklist[current_user["username"]]:
+            account = {"username": username}
+            db_blacklist[current_user["username"]].append(account)
+            added_accounts.append(account)
+    
+    return added_accounts
+
 @app.get("/accounts", response_model=List[InstagramAccount])
 def get_accounts(current_user: dict = Depends(get_current_user)):
     return db_accounts.get(current_user["username"], [])
@@ -193,7 +220,7 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
     
-    if username in db_blacklist.get(current_user["username"], []):
+    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
         raise HTTPException(status_code=400, detail="Account is blacklisted")
     
     async with aiohttp.ClientSession() as session:
@@ -206,7 +233,7 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
         
         reels = []
         pagination_token = None
-        for _ in range(10):
+        for _ in range(4):
             reels_url = f"https://{RAPIDAPI_HOST}/v1.2/reels"
             params = {"username_or_id_or_url": username}
             if pagination_token:
@@ -222,13 +249,11 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
                 if not pagination_token:
                     break
         
-        for reel in reels:
-            if not engagement:
-                break
-
-            engagement_rate = (reel['like_count'] + reel['comment_count']) / followers_count
-            if engagement_rate < engagement:
-                reels.remove(reel)
+        if engagement:
+            engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
+            median_engagement = sorted(engagements)[len(engagements) // 2] if engagements else 0
+            if median_engagement < int(engagement):
+                HTTPException(status_code=400, detail="Engagement is too low")
         
         if not reels:
             raise HTTPException(status_code=400, detail="No reels found for this account")
@@ -302,9 +327,6 @@ async def fetch_reels(session, user_id, max_pages=3):
 
 async def process_followings(username, current_user, engagement):
     
-    if username in db_blacklist.get(current_user["username"], []):
-        raise HTTPException(status_code=400, detail="Account is blacklisted")
-    
     async with aiohttp.ClientSession() as session:
         # Получаем список followings
         followings_data = await fetch_followings(session, username)
@@ -312,15 +334,18 @@ async def process_followings(username, current_user, engagement):
 
         tasks = []
         for user_id in followings:
-            tasks.append(process_user(session, user_id, engagement))
+            tasks.append(process_user(session, user_id, engagement, current_user))
         results = await asyncio.gather(*tasks)
 
         save_to_db(results, current_user["username"])
 
-async def process_user(session, user_id, engagement):
+async def process_user(session, user_id, engagement, current_user):
     # Получаем профиль пользователя
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
+    
+    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
+        return
     
     followers_count = profile_data['data']['follower_count']
 
@@ -328,22 +353,15 @@ async def process_user(session, user_id, engagement):
     reels = await fetch_reels(session, user_id)
     del reels[:2]
     
-    for reel in reels:
-        if not engagement:
-            break
-        
-        engagement_rate = (reel['like_count'] + reel['comment_count']) / followers_count
-        if engagement_rate < engagement:
-            reels.remove(reel)
-
-    
     views = [reel['play_count'] for reel in reels if 'play_count' in reel]
     avg_views = int(sum(views) / len(views)) if views else 0
     reels_with_10000_views = sum(1 for view in views if view > 10000)
 
-    median_views = sorted(views)[len(views) // 2] if views else 0
-    if median_views < 3000 or reels_with_10000_views < 3:
-        return None
+    if engagement:
+        engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
+        median_engagement = sorted(engagements)[len(engagements) // 2] if engagements else 0
+        if median_engagement < int(engagement):
+            return
 
     return (username, followers_count, avg_views, reels_with_10000_views)
 
@@ -391,6 +409,58 @@ async def analyze_followings(request: Request, current_user: dict = Depends(get_
     #             "reels_with_10000_views": 12314
     #         })
     # return {"message": "Accounts analyzed successfully"}
+
+@app.post("/fetch_reels_data")
+async def fetch_reels_data(request: Request, current_user: dict = Depends(get_current_user)):
+    data = await request.json()
+    url = data.get('url')
+    username = data.get('username')
+    reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
+    
+    if not url:
+        raise HTTPException(status_code=400, detail="URL is required")
+    
+    params = {"code_or_id_or_url": url}
+    
+    # Здесь добавьте логику для получения данных о рилсе по URL
+    # Например, используйте aiohttp для выполнения запроса к API Instagram
+    async with aiohttp.ClientSession() as session:
+        async with session.get(reels_url, headers=HEADERS, params=params) as response:
+            if response.status != 200:
+                raise HTTPException(status_code=response.status, detail="Failed to fetch reels data")
+            reels_data_json = await response.json()
+            reels_data = reels_data_json['data']['metrics']
+            
+    # Пример данных, которые могут быть возвращены
+    data = {
+        "views": reels_data.get("play_count", 0),
+        "likes": reels_data.get("like_count", 0),
+        "comments": reels_data.get("comment_count", 0)
+    }
+    
+    # Ensure the integration table exists for the current user
+    if current_user["username"] not in db_integration:
+        db_integration[current_user["username"]] = []
+    
+    # Find the account by username and update its information
+    account = next((acc for acc in db_integration[current_user["username"]] if acc["username"] == username), None)
+    if account:
+        account.update({
+            "reels_url": url,
+            "views": data["views"],
+            "likes": data["likes"],
+            "comments": data["comments"]
+        })
+    else:
+        db_integration[current_user["username"]].append({
+            "username": username,
+            "reels_url": url,
+            "views": data["views"],
+            "likes": data["likes"],
+            "comments": data["comments"]
+        })
+    
+    return data
 
 # Frontend HTML serving
 templates = Jinja2Templates(directory="templates")

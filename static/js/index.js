@@ -6,7 +6,7 @@ let formSection = document.querySelector(".form-section");
 let signupButton = document.querySelector(".signup-box .clkbtn");
 let loginButton = document.querySelector(".login-box .clkbtn");
 
-API_URL = "https://45.91.238.43/";
+API_URL = "https://45.91.238.43";
 
 signup.addEventListener("click", () => {
     slider.classList.add("moveslider");

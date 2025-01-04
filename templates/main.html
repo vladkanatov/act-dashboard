@@ -189,13 +189,29 @@
         }
 
         .toggle-message-form-button {
-            background-color: rgb(91, 146, 255);
+            background-color: rgb(91, 146, 255); /* Синий цвет */
             color: #fff;
             border: none;
             padding: 10px 20px;
             border-radius: 5px;
             cursor: pointer;
             margin-top: 20px;
+        }
+
+        #blacklistUsernamesInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        input[type="text"] {
+            border: none;
+            outline: none;
+            width: 100%;
+            resize: horizontal; /* Позволяет изменять размер по горизонтали */
+            overflow: hidden; /* Скрывает переполнение */
         }
 
         .loader {
@@ -378,19 +394,36 @@
                     <thead>
                         <tr>
                             <th>Username</th>
-                            <th>Followers</th>
-                            <th>Avg Views</th>
-                            <th>Reels with >10K Views</th>
+                            <th>Reels URL</th>
+                            <th>Просмотры</th>
+                            <th>Лайки</th>
+                            <th>Комментарии</th>
                         </tr>
                     </thead>
                     <tbody id="integrationTableBody">
-                        <!-- Rows dynamically populated -->
+                        <tr>
+                            <td><input type="text" id="integrationUsernameInput" placeholder="Username" readonly></td>
+                            <td><input type="text" id="integrationReelsUrlInput" placeholder="Reels URL"></td>
+                            <td><input type="text" id="integrationViewsInput" placeholder="Просмотры" readonly></td>
+                            <td><input type="text" id="integrationLikesInput" placeholder="Лайки" readonly></td>
+                            <td><input type="text" id="integrationCommentsInput" placeholder="Комментарии" readonly></td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
         <div id="blacklistTab" class="tab-content">
+            <div class="form-section">
+                <button id="toggleBlacklistFormButton" class="toggle-message-form-button">Добавить аккаунты</button>
+                <form id="addMultipleBlacklistForm" style="display: none; margin-top: 20px;">
+                    <textarea id="blacklistUsernamesInput" placeholder="Введите Instagram Usernames, по одному в строке" rows="3" style="margin-bottom: 10px;"></textarea>
+                    <button type="submit" class="toggle-message-form-button">
+                        Принять
+                        <div class="loader" id="addMultipleBlacklistLoader" style="display: none;"></div>
+                    </button>
+                </form>
+            </div>
             <div class="container">
                 <h3 class="title">Черный список</h3>
                 <table>
@@ -531,6 +564,73 @@
                 addAccountLoader.style.display = 'none';
             }
         });
+
+        document.addEventListener('input', async (event) => {
+            if (event.target.classList.contains('integration-reels-url-input')) {
+                const url = event.target.value;
+                const row = event.target.closest('tr');
+                const viewsInput = row.querySelector('.integration-views-input');
+                const likesInput = row.querySelector('.integration-likes-input');
+                const commentsInput = row.querySelector('.integration-comments-input');
+                const username = row.querySelector('.integration-username-input').value;
+        
+                if (url) {
+                    try {
+                        const response = await fetch('/fetch_reels_data', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'token': localStorage.getItem('access_token')
+                            },
+                            body: JSON.stringify({ url, username })
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            viewsInput.value = data.views;
+                            likesInput.value = data.likes;
+                            commentsInput.value = data.comments;
+                        } else {
+                            alert('Ошибка при получении данных о рилсе');
+                        }
+                    } catch (error) {
+                        alert('Ошибка при получении данных о рилсе', error);
+                        console.error(error);
+                    }
+                }
+            }
+        });
+
+        document.getElementById('addMultipleBlacklistForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            
+            const usernames = document.getElementById('blacklistUsernamesInput').value.split('\n').map(username => username.trim()).filter(username => username !== '');
+            const addMultipleBlacklistLoader = document.getElementById('addMultipleBlacklistLoader');
+            
+            addMultipleBlacklistLoader.style.display = 'inline-block';
+        
+            try {
+                const response = await fetch('/blacklist/multiple', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'token': localStorage.getItem('access_token')
+                    },
+                    body: JSON.stringify({ usernames })
+                });
+                
+                if (response.ok) {
+                    alert("Аккаунты успешно добавлены в черный список");
+                    updateBlacklist();
+                } else {
+                    alert('Ошибка при добавлении аккаунтов в черный список');
+                }
+            } catch (error) {
+                alert('Ошибка при добавлении аккаунтов в черный список', error);
+                console.error(error);
+            } finally {
+                addMultipleBlacklistLoader.style.display = 'none';
+            }
+        });
     
     
         async function deleteAccount(username) {
@@ -662,10 +762,11 @@
             accounts.forEach(account => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${account.username}</td>
-                    <td>${account.followers}</td>
-                    <td>${account.avg_views}</td>
-                    <td>${account.reels_with_10000_views}</td>
+                    <td><input type="text" class="integration-username-input" value="${account.username}" readonly></td>
+                    <td><input type="text" class="integration-reels-url-input" value="${account.reels_url || ''}" placeholder="Reels URL"></td>
+                    <td><input type="text" class="integration-views-input" value="${account.views || ''}" placeholder="Просмотры" readonly></td>
+                    <td><input type="text" class="integration-likes-input" value="${account.likes || ''}" placeholder="Лайки" readonly></td>
+                    <td><input type="text" class="integration-comments-input" value="${account.comments || ''}" placeholder="Комментарии" readonly></td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -710,6 +811,15 @@
             localStorage.removeItem('access_token');
             // Перенаправление на страницу входа
             window.location.href = '/';
+        });
+
+        document.getElementById('toggleBlacklistFormButton').addEventListener('click', () => {
+            const form = document.getElementById('addMultipleBlacklistForm');
+            if (form.style.display === 'none' || form.style.display === '') {
+                form.style.display = 'block';
+            } else {
+                form.style.display = 'none';
+            }
         });
 
         async function sendMessage(username) {
