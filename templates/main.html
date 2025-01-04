@@ -778,33 +778,34 @@
             row.classList.add('viewed');
         }
     
-        let lastMessage = localStorage.getItem('lastMessage') || "";
-
-        // Переключение видимости формы сообщения
-        document.getElementById('toggleMessageFormButton').addEventListener('click', () => {
+        document.addEventListener('DOMContentLoaded', (event) => {
             const messageForm = document.getElementById('messageForm');
-            if (messageForm.style.display === 'none' || messageForm.style.display === '') {
-                messageForm.style.display = 'block';
-            } else {
+            const messageInput = document.getElementById('messageInput');
+            const savedMessage = localStorage.getItem('lastMessage');
+    
+            if (savedMessage) {
+                messageInput.value = savedMessage;
+            }
+    
+            document.getElementById('toggleMessageFormButton').addEventListener('click', () => {
+                if (messageForm.style.display === 'none' || messageForm.style.display === '') {
+                    messageForm.style.display = 'block';
+                } else {
+                    messageForm.style.display = 'none';
+                }
+            });
+    
+            document.getElementById('sendMessageButton').addEventListener('click', () => {
+                const message = messageInput.value;
+                if (message.trim() === '') {
+                    alert('Сообщение не может быть пустым.');
+                    return;
+                }
+    
+                localStorage.setItem('lastMessage', message);
                 messageForm.style.display = 'none';
-            }
-        });
-
-        // Обработка отправки сообщения
-        document.getElementById('sendMessageButton').addEventListener('click', () => {
-            const message = document.getElementById('messageInput').value;
-            if (message.trim() === '') {
-                alert('Сообщение не может быть пустым.');
-                return;
-            }
-
-            // Сохранение сообщения в переменную
-            lastMessage = message;
-            localStorage.setItem('lastMessage', lastMessage);
-
-            // Скрыть форму после отправки сообщения
-            document.getElementById('messageForm').style.display = 'none';
-            alert('Сообщение сохранено: ' + lastMessage);
+                alert('Сообщение сохранено: ' + message);
+            });
         });
 
         document.getElementById('logoutButton').addEventListener('click', () => {
@@ -824,19 +825,20 @@
         });
 
         async function sendMessage(username) {
+            const lastMessage = localStorage.getItem('lastMessage');
             navigator.clipboard.writeText(lastMessage).then(async () => {
-                window.open(`https://ig.me/m/${username}`, '_blank');
-                await fetch(`/move_to_integration_pending/${username}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': localStorage.getItem('access_token')
-                    }
-                });
-                updateAccountList();
-                updateIntegrationPendingList();
+            window.open(`https://ig.me/m/${username}`, '_blank');
+            await fetch(`/move_to_integration_pending/${username}`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json',
+                'token': localStorage.getItem('access_token')
+                }
+            });
+            updateAccountList();
+            updateIntegrationPendingList();
             }).catch(err => {
-                console.error('Ошибка копирования в буфер обмена: ', err);
+            console.error('Ошибка копирования в буфер обмена: ', err);
             });
         }
 
