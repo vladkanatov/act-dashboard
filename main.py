@@ -230,6 +230,9 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
                 raise HTTPException(status_code=400, detail="Failed to fetch profile information")
             data = await profile_response.json()
             followers_count = data['data']['follower_count']
+            
+            if followers_count > 80000:
+                raise HTTPException(status_code=400, detail="Too many followers in account")
         
         reels = []
         pagination_token = None
@@ -253,7 +256,7 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
             engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
             median_engagement = sorted(engagements)[len(engagements) // 2] if engagements else 0
             if median_engagement < int(engagement):
-                HTTPException(status_code=400, detail="Engagement is too low")
+                raise HTTPException(status_code=400, detail="Engagement is too low")
         
         if not reels:
             raise HTTPException(status_code=400, detail="No reels found for this account")
@@ -261,6 +264,12 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
         views = [reel['play_count'] for reel in reels if 'play_count' in reel]
         avg_views = int(sum(views) / len(views))
         reels_with_10000_views = sum(1 for view in views if view > 10000)
+        
+        if reels_with_10000_views < 3:
+            raise HTTPException(status_code=400, detail="Few reels with 10k views")
+        
+        if avg_views < 3000:
+            raise HTTPException(status_code=400, detail="Few avg views")
 
         # Save to database
         if current_user["username"] not in db_accounts:
@@ -348,6 +357,9 @@ async def process_user(session, user_id, engagement, current_user):
         return
     
     followers_count = profile_data['data']['follower_count']
+    
+    if followers_count > 80000:
+        return
 
     # Получаем рилсы
     reels = await fetch_reels(session, user_id)
@@ -356,6 +368,12 @@ async def process_user(session, user_id, engagement, current_user):
     views = [reel['play_count'] for reel in reels if 'play_count' in reel]
     avg_views = int(sum(views) / len(views)) if views else 0
     reels_with_10000_views = sum(1 for view in views if view > 10000)
+    
+    if reels_with_10000_views < 3:
+        return
+    
+    if avg_views < 3000:
+        return
 
     if engagement:
         engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
