@@ -551,14 +551,16 @@
                 
                 if (response.ok) {
                     alert(result.message);
-                    // Обновить список аккаунтов без перезагрузки страницы
-                    // Например, можно вызвать функцию для обновления списка аккаунтов
                     updateAccountList();
                 } else {
-                    alert(result.error || 'Ошибка при добавлении аккаунта');
+                    if (response.status === 400) {
+                        alert(result.detail);
+                    } else {
+                        alert(result.error || 'Ошибка при добавлении аккаунта');
+                    }
                 }
             } catch (error) {
-                alert('Ошибка при добавлении аккаунта', error);
+                alert('Ошибка при добавлении аккаунта: ' + error.message);
                 console.error(error);
             } finally {
                 addAccountLoader.style.display = 'none';
