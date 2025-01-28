@@ -1,349 +1,438 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instagram Account Manager</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Poppins", sans-serif;
-        }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Instagram Account Manager</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+                font-family: "Poppins", sans-serif;
+            }
 
-        body {
-            min-height: 100vh;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background-color: rgb(231, 231, 231);
-        }
-
-        header {
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background-color: #fff;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .heading {
-            font-size: 24px;
-            font-weight: 600;
-            color: green;
-        }
-
-        #logoutButton {
-            background-color: red;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-        }
-
-        .tabs-container {
-            width: 90%;
-            max-width: 1200px;
-            margin-top: 20px;
-        }
-        
-        .tabs {
-            display: flex;
-            justify-content: flex-start;
-            border-bottom: 2px solid #ddd;
-        }
-        
-        .tab-button {
-            background-color: #f1f1f1;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            margin: 0 5px;
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            border-bottom: 2px solid transparent;
-            transition: background-color 0.3s, border-bottom 0.3s;
-        }
-        
-        .tab-button:hover {
-            background-color: #ddd;
-        }
-        
-        .tab-button.active {
-            background-color: #fff;
-            border-bottom: 2px solid #3498db;
-            font-weight: bold;
-        }
-        
-        .tab-content {
-            display: none;
-            width: 100%;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        .container {
-            width: 100%;
-            background-color: #fff;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
-            padding: 20px;
-            margin-top: -2px; /* Чтобы контейнер был "присоединен" к вкладкам */
-        }
-
-        .title {
-            font-weight: 500;
-            font-size: 20px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .form-section {
-            margin-bottom: 20px;
-        }
-
-        .form-section input {
-            width: calc(100% - 120px);
-            padding: 10px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .form-section button {
-            background-color: rgb(255, 146, 91);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        table th, table td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-
-        table th {
-            background-color: rgb(240, 240, 240);
-            font-weight: 600;
-        }
-
-        .btn {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .btn-danger {
-            background-color: red;
-            color: #fff;
-        }
-
-        .btn-primary {
-            background-color: rgb(91, 146, 255);
-            color: #fff;
-        }
-
-        .btn-success {
-            background-color: rgb(91, 255, 91);
-            color: #fff;
-        }
-
-        .message-form {
-            display: none;
-            margin-top: 20px;
-        }
-
-        .message-form textarea {
-            width: calc(100% - 120px);
-            padding: 10px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        .message-form button {
-            background-color: rgb(255, 146, 91);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .toggle-message-form-button {
-            background-color: rgb(91, 146, 255); /* Синий цвет */
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-
-        #blacklistUsernamesInput {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-
-        input[type="text"] {
-            border: none;
-            outline: none;
-            width: 100%;
-            resize: horizontal; /* Позволяет изменять размер по горизонтали */
-            overflow: hidden; /* Скрывает переполнение */
-        }
-
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-left: 10px;
-            vertical-align: middle;
-        }
-
-        .viewed {
-            background-color: #e0ffe0; /* Светло-зеленый цвет для просмотренных аккаунтов */
-        }
-        
-        button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loading-indicator {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
-        }
-        
-        .spinner {
-            border: 16px solid #f3f3f3;
-            border-top: 16px solid #3498db;
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            animation: spin 2s linear infinite;
-        }
-
-        .scroll-to-top-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: rgb(91, 146, 255);
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            display: none; /* Скрыта по умолчанию */
-            z-index: 1000;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Responsive Design */
-        @media screen and (max-width: 768px) {
-            .form-section input {
+            body {
+                min-height: 100vh;
                 width: 100%;
-                margin-bottom: 10px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                background-color: rgb(231, 231, 231);
             }
 
-            .form-section button {
+            header {
                 width: 100%;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 20px;
+                background-color: #fff;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             }
 
-            table th, table td {
-                font-size: 12px;
-                padding: 5px;
-            }
-        }
-
-        @media screen and (max-width: 480px) {
             .heading {
-                font-size: 18px;
+                font-size: 24px;
+                font-weight: 600;
+                color: green;
             }
 
             #logoutButton {
-                padding: 8px 15px;
-                font-size: 14px;
+                background-color: red;
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 20px;
+                cursor: pointer;
+            }
+
+            .tabs-container {
+                width: 90%;
+                max-width: 1200px;
+                margin-top: 20px;
+            }
+
+            .tabs {
+                display: flex;
+                justify-content: flex-start;
+                border-bottom: 2px solid #ddd;
+            }
+
+            .tab-button {
+                background-color: #f1f1f1;
+                border: none;
+                padding: 10px 20px;
+                cursor: pointer;
+                margin: 0 5px;
+                border-top-left-radius: 5px;
+                border-top-right-radius: 5px;
+                border-bottom: 2px solid transparent;
+                transition:
+                    background-color 0.3s,
+                    border-bottom 0.3s;
+            }
+
+            .tab-button:hover {
+                background-color: #ddd;
+            }
+
+            .tab-button.active {
+                background-color: #fff;
+                border-bottom: 2px solid #3498db;
+                font-weight: bold;
+            }
+
+            .tab-content {
+                display: none;
+                width: 100%;
+            }
+
+            .tab-content.active {
+                display: block;
+            }
+
+            .container {
+                width: 100%;
+                background-color: #fff;
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                border-radius: 10px;
+                overflow: hidden;
+                padding: 20px;
+                margin-top: -2px; /* Чтобы контейнер был "присоединен" к вкладкам */
             }
 
             .title {
-                font-size: 16px;
+                font-weight: 500;
+                font-size: 20px;
+                margin-bottom: 20px;
+                text-align: center;
+            }
+
+            .form-section {
+                margin-bottom: 20px;
+            }
+
+            .form-section input {
+                width: calc(100% - 120px);
+                padding: 10px;
+                margin-right: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            .form-section button {
+                background-color: rgb(255, 146, 91);
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
             }
 
             table {
-                font-size: 12px;
+                width: 100%;
+                border-collapse: collapse;
+            }
+
+            table th,
+            table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: center;
+            }
+
+            table th {
+                background-color: rgb(240, 240, 240);
+                font-weight: 600;
             }
 
             .btn {
-                padding: 4px 8px;
-                font-size: 12px;
+                padding: 5px 10px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
             }
-        }
-    </style>
-</head>
-<body>
-    <header>
-        <div class="heading">Instagram Account Manager</div>
-        <button id="logoutButton">Выйти</button>
-    </header>
 
-    <div class="tabs-container">
-        <div class="tabs">
-            <button class="tab-button active" onclick="showTab('parsingTab', this)">Парсинг</button>
-            <button class="tab-button" onclick="showTab('integrationPendingTab', this)">Ожидает интеграции</button>
-            <button class="tab-button" onclick="showTab('integrationTab', this)">Интеграция</button>
-            <button class="tab-button" onclick="showTab('blacklistTab', this)">Черный список</button>
-        </div>
+            .btn-danger {
+                background-color: red;
+                color: #fff;
+            }
 
-        <div id="parsingTab" class="tab-content active">
-            <div class="container">
-                <div class="form-section">
-                    <h3 class="title">Добавить аккаунт</h3>
-                    <form id="addAccountForm">
-                        <input type="text" id="usernameInput" placeholder="Instagram Username">
-                        <input type="number" id="engagementRateInput" placeholder="Минимальный коэффициент вовлеченности (%)" step="0.01">
-                        <button type="submit">
-                            Добавить
-                            <div class="loader" id="addAccountLoader" style="display: none;"></div>
-                        </button>
-                    </form>
+            .btn-primary {
+                background-color: rgb(91, 146, 255);
+                color: #fff;
+            }
+
+            .btn-success {
+                background-color: rgb(91, 255, 91);
+                color: #fff;
+            }
+
+            .message-form {
+                display: none;
+                margin-top: 20px;
+            }
+
+            .message-form textarea {
+                width: calc(100% - 120px);
+                padding: 10px;
+                margin-right: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            .message-form button {
+                background-color: rgb(255, 146, 91);
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            .toggle-message-form-button {
+                background-color: rgb(91, 146, 255); /* Синий цвет */
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                margin-top: 20px;
+            }
+
+            #blacklistUsernamesInput {
+                width: 100%;
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            input[type="text"] {
+                border: none;
+                outline: none;
+                width: 100%;
+                resize: horizontal; /* Позволяет изменять размер по горизонтали */
+                overflow: hidden; /* Скрывает переполнение */
+            }
+
+            .loader {
+                border: 4px solid #f3f3f3;
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 16px;
+                height: 16px;
+                animation: spin 1s linear infinite;
+                display: inline-block;
+                margin-left: 10px;
+                vertical-align: middle;
+            }
+
+            .viewed {
+                background-color: #e0ffe0; /* Светло-зеленый цвет для просмотренных аккаунтов */
+            }
+
+            button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .loading-indicator {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1000;
+            }
+
+            .spinner {
+                border: 16px solid #f3f3f3;
+                border-top: 16px solid #3498db;
+                border-radius: 50%;
+                width: 120px;
+                height: 120px;
+                animation: spin 2s linear infinite;
+            }
+
+            .scroll-to-top-button {
+                position: fixed;
+                bottom: 20px;
+                right: 20px;
+                background-color: rgb(91, 146, 255);
+                color: #fff;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+                display: none; /* Скрыта по умолчанию */
+                z-index: 1000;
+            }
+
+            .integration-reels-url-input,
+            .integration-views-input,
+            .integration-likes-input,
+            .integration-comments-input {
+                width: 100%;
+                padding: 5px;
+                margin: 5px 0;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* Responsive Design */
+            @media screen and (max-width: 768px) {
+                .form-section input {
+                    width: 100%;
+                    margin-bottom: 10px;
+                }
+
+                .form-section button {
+                    width: 100%;
+                }
+
+                table th,
+                table td {
+                    font-size: 12px;
+                    padding: 5px;
+                }
+            }
+
+            @media screen and (max-width: 480px) {
+                .heading {
+                    font-size: 18px;
+                }
+
+                #logoutButton {
+                    padding: 8px 15px;
+                    font-size: 14px;
+                }
+
+                .title {
+                    font-size: 16px;
+                }
+
+                table {
+                    font-size: 12px;
+                }
+
+                .btn {
+                    padding: 4px 8px;
+                    font-size: 12px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <div class="heading">Instagram Account Manager</div>
+            <button id="logoutButton">Выйти</button>
+        </header>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <button
+                    class="tab-button active"
+                    onclick="showTab('parsingTab', this)"
+                >
+                    Парсинг
+                </button>
+                <button
+                    class="tab-button"
+                    onclick="showTab('integrationPendingTab', this)"
+                >
+                    Ожидает интеграции
+                </button>
+                <button
+                    class="tab-button"
+                    onclick="showTab('integrationTab', this)"
+                >
+                    Интеграция
+                </button>
+                <button
+                    class="tab-button"
+                    onclick="showTab('blacklistTab', this)"
+                >
+                    Черный список
+                </button>
+            </div>
+
+            <div id="parsingTab" class="tab-content active">
+                <div class="container">
+                    <div class="form-section">
+                        <h3 class="title">Добавить аккаунт</h3>
+                        <form id="addAccountForm">
+                            <input
+                                type="text"
+                                id="usernameInput"
+                                placeholder="Instagram Username"
+                            />
+                            <input
+                                type="number"
+                                id="engagementRateInput"
+                                placeholder="Минимальный коэффициент вовлеченности (%)"
+                                step="0.01"
+                            />
+                            <button type="submit">
+                                Добавить
+                                <div
+                                    class="loader"
+                                    id="addAccountLoader"
+                                    style="display: none"
+                                ></div>
+                            </button>
+                        </form>
+                    </div>
+
+                    <div id="accountList">
+                        <h3 class="title">Таблица аккаунтов</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Followers</th>
+                                    <th>Avg Views</th>
+                                    <th>Reels with >10K Views</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="accountsTableBody">
+                                <!-- Rows dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <button
+                        id="toggleMessageFormButton"
+                        class="toggle-message-form-button"
+                    >
+                        Сохранить сообщение
+                    </button>
+                    <div class="message-form" id="messageForm">
+                        <textarea
+                            id="messageInput"
+                            placeholder="Введите ваше сообщение"
+                        ></textarea>
+                        <button id="sendMessageButton">Принять</button>
+                    </div>
                 </div>
+            </div>
 
-                <div id="accountList">
-                    <h3 class="title">Таблица аккаунтов</h3>
+            <div id="integrationPendingTab" class="tab-content">
+                <div class="container">
+                    <h3 class="title">Ожидает интеграции</h3>
                     <table>
                         <thead>
                             <tr>
@@ -354,353 +443,415 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="accountsTableBody">
+                        <tbody id="integrationPendingTableBody">
                             <!-- Rows dynamically populated -->
                         </tbody>
                     </table>
                 </div>
-                <button id="toggleMessageFormButton" class="toggle-message-form-button">Сохранить сообщение</button>
-                <div class="message-form" id="messageForm">
-                    <textarea id="messageInput" placeholder="Введите ваше сообщение"></textarea>
-                    <button id="sendMessageButton">Принять</button>
+            </div>
+
+            <div id="integrationTab" class="tab-content">
+                <div class="container">
+                    <h3 class="title">Интеграция</h3>
+                    <button id="updateReelsDataButton" class="btn btn-primary">Обновить данные о рилсах</button>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Reels</th>
+                                <th>Median Views</th>
+                                <th>Median Likes</th>
+                                <th>Median Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody id="integrationTableBody">
+                            <!-- Rows dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="blacklistTab" class="tab-content">
+                <div class="form-section">
+                    <button
+                        id="toggleBlacklistFormButton"
+                        class="toggle-message-form-button"
+                    >
+                        Добавить аккаунты
+                    </button>
+                    <form
+                        id="addMultipleBlacklistForm"
+                        style="display: none; margin-top: 20px"
+                    >
+                        <textarea
+                            id="blacklistUsernamesInput"
+                            placeholder="Введите Instagram Usernames, по одному в строке"
+                            rows="3"
+                            style="margin-bottom: 10px"
+                        ></textarea>
+                        <button
+                            type="submit"
+                            class="toggle-message-form-button"
+                        >
+                            Принять
+                            <div
+                                class="loader"
+                                id="addMultipleBlacklistLoader"
+                                style="display: none"
+                            ></div>
+                        </button>
+                    </form>
+                </div>
+                <div class="container">
+                    <h3 class="title">Черный список</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Actions</th>
+                                <th>Median Views</th>
+                                <th>Median Likes</th>
+                                <th>Median Comments</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blacklistTableBody">
+                            <!-- Rows dynamically populated -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+        <button
+            id="scrollToTopButton"
+            class="scroll-to-top-button"
+            onclick="scrollToTop()"
+        >
+            Наверх
+        </button>
 
-        <div id="integrationPendingTab" class="tab-content">
-            <div class="container">
-                <h3 class="title">Ожидает интеграции</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Followers</th>
-                            <th>Avg Views</th>
-                            <th>Reels with >10K Views</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="integrationPendingTableBody">
-                        <!-- Rows dynamically populated -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    
-        <div id="integrationTab" class="tab-content">
-            <div class="container">
-                <h3 class="title">Интеграция</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Reels URL</th>
-                            <th>Просмотры</th>
-                            <th>Лайки</th>
-                            <th>Комментарии</th>
-                        </tr>
-                    </thead>
-                    <tbody id="integrationTableBody">
-                        <tr>
-                            <td><input type="text" id="integrationUsernameInput" placeholder="Username" readonly></td>
-                            <td><input type="text" id="integrationReelsUrlInput" placeholder="Reels URL"></td>
-                            <td><input type="text" id="integrationViewsInput" placeholder="Просмотры" readonly></td>
-                            <td><input type="text" id="integrationLikesInput" placeholder="Лайки" readonly></td>
-                            <td><input type="text" id="integrationCommentsInput" placeholder="Комментарии" readonly></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+        <script>
+            function showTab(tabId, element) {
+                document.querySelectorAll(".tab-content").forEach((tab) => {
+                    tab.classList.remove("active");
+                });
+                document.getElementById(tabId).classList.add("active");
 
-        <div id="blacklistTab" class="tab-content">
-            <div class="form-section">
-                <button id="toggleBlacklistFormButton" class="toggle-message-form-button">Добавить аккаунты</button>
-                <form id="addMultipleBlacklistForm" style="display: none; margin-top: 20px;">
-                    <textarea id="blacklistUsernamesInput" placeholder="Введите Instagram Usernames, по одному в строке" rows="3" style="margin-bottom: 10px;"></textarea>
-                    <button type="submit" class="toggle-message-form-button">
-                        Принять
-                        <div class="loader" id="addMultipleBlacklistLoader" style="display: none;"></div>
-                    </button>
-                </form>
-            </div>
-            <div class="container">
-                <h3 class="title">Черный список</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Username</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="blacklistTableBody">
-                        <!-- Rows dynamically populated -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    <button id="scrollToTopButton" class="scroll-to-top-button" onclick="scrollToTop()">Наверх</button>
-    
-    <script>
+                document.querySelectorAll(".tab-button").forEach((button) => {
+                    button.classList.remove("active");
+                });
+                element.classList.add("active");
 
-        function showTab(tabId, element) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.getElementById(tabId).classList.add('active');
-        
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-            });
-            element.classList.add('active');
-
-            if (tabId === 'blacklistTab') {
-                updateBlacklist();
-            } else if (tabId === 'parsingTab') {
-                updateAccountList();
-            }
-        }
-        
-
-        document.addEventListener("DOMContentLoaded", () => {
-            updateAccountList();
-            updateIntegrationPendingList();
-            updateIntegrationList();
-            updateBlacklist();
-        });
-
-        async function updateBlacklist() {
-            const response = await fetch('/blacklist', {
-                headers: {
-                    'token': localStorage.getItem('access_token')
+                if (tabId === "blacklistTab") {
+                    updateBlacklist();
+                } else if (tabId === "parsingTab") {
+                    updateAccountList();
                 }
+            }
+
+            document.addEventListener("DOMContentLoaded", () => {
+                updateAccountList();
+                updateIntegrationPendingList();
+                updateIntegrationList();
+                updateBlacklist();
             });
-            const blacklist = await response.json();
-            
-            const blacklistTableBody = document.querySelector('#blacklistTableBody');
-            blacklistTableBody.innerHTML = ''; // Очистить текущий список
-        
-            blacklist.forEach(account => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+
+            async function updateBlacklist() {
+                const response = await fetch("/blacklist", {
+                    headers: {
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
+                const blacklist = await response.json();
+
+                const blacklistTableBody = document.querySelector(
+                    "#blacklistTableBody",
+                );
+                blacklistTableBody.innerHTML = ""; // Очистить текущий список
+
+                blacklist.forEach((account) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
                     <td><a href="https://www.instagram.com/${account.username}" target="_blank">${account.username}</a></td>
                     <td>
                         <button class="btn btn-danger btn-sm" onclick="removeFromBlacklist('${account.username}')">Remove</button>
                     </td>
                 `;
-                blacklistTableBody.appendChild(row);
-            });
-        }
-
-        async function removeFromBlacklist(username) {
-            const response = await fetch(`/blacklist/${username}`, {
-                method: 'DELETE',
-                headers: {
-                    'token': localStorage.getItem('access_token')
-                }
-            });
-            const result = await response.json();
-            alert(result.message);
-            updateBlacklist();
-        }
-
-        async function deleteAccount(username) {
-            if (!confirm(`Are you sure you want to delete ${username}?`)) {
-                return;
-            }
-            try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch(`/accounts/${username}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': token
-                    }
+                    blacklistTableBody.appendChild(row);
                 });
-        
+            }
+
+            async function removeFromBlacklist(username) {
+                const response = await fetch(`/blacklist/${username}`, {
+                    method: "DELETE",
+                    headers: {
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
                 const result = await response.json();
                 alert(result.message);
-                updateAccountList();
                 updateBlacklist();
-            } catch (error) {
-                alert((error.response && error.response.message) || 'Failed to delete account');
             }
-        }
 
-        document.getElementById('addAccountForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const username = document.getElementById('usernameInput').value;
-            const engagement = document.getElementById('engagementRateInput').value
-            const addAccountLoader = document.getElementById('addAccountLoader');
-            
-            addAccountLoader.style.display = 'inline-block';
+            async function deleteAccount(username) {
+                if (!confirm(`Are you sure you want to delete ${username}?`)) {
+                    return;
+                }
+                try {
+                    const token = localStorage.getItem("access_token");
+                    const response = await fetch(`/accounts/${username}`, {
+                        method: "DELETE",
+                        headers: {
+                            "Content-Type": "application/json",
+                            token: token,
+                        },
+                    });
 
-            try {
-                const response = await fetch('/accounts', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': localStorage.getItem('access_token')
-                    },
-                    body: JSON.stringify({ username, engagement })
-                });
-                
-                const result = await response.json();
-                
-                if (response.ok) {
+                    const result = await response.json();
                     alert(result.message);
                     updateAccountList();
-                } else {
-                    if (response.status === 400) {
-                        alert(result.detail);
-                    } else {
-                        alert(result.error || 'Ошибка при добавлении аккаунта');
-                    }
+                    updateBlacklist();
+                } catch (error) {
+                    alert(
+                        (error.response && error.response.message) ||
+                            "Failed to delete account",
+                    );
                 }
-            } catch (error) {
-                alert('Ошибка при добавлении аккаунта: ' + error.message);
-                console.error(error);
-            } finally {
-                addAccountLoader.style.display = 'none';
             }
-        });
 
-        document.addEventListener('input', async (event) => {
-            if (event.target.classList.contains('integration-reels-url-input')) {
-                const url = event.target.value;
-                const row = event.target.closest('tr');
-                const viewsInput = row.querySelector('.integration-views-input');
-                const likesInput = row.querySelector('.integration-likes-input');
-                const commentsInput = row.querySelector('.integration-comments-input');
-                const username = row.querySelector('.integration-username-input').value;
-        
-                if (url) {
+            document
+                .getElementById("addAccountForm")
+                .addEventListener("submit", async (event) => {
+                    event.preventDefault();
+
+                    const username =
+                        document.getElementById("usernameInput").value;
+                    const engagement = document.getElementById(
+                        "engagementRateInput",
+                    ).value;
+                    const addAccountLoader =
+                        document.getElementById("addAccountLoader");
+
+                    addAccountLoader.style.display = "inline-block";
+
                     try {
-                        const response = await fetch('/fetch_reels_data', {
-                            method: 'POST',
+                        const response = await fetch("/accounts", {
+                            method: "POST",
                             headers: {
-                                'Content-Type': 'application/json',
-                                'token': localStorage.getItem('access_token')
+                                "Content-Type": "application/json",
+                                token: localStorage.getItem("access_token"),
                             },
-                            body: JSON.stringify({ url, username })
+                            body: JSON.stringify({ username, engagement }),
                         });
-                        const data = await response.json();
+
+                        const result = await response.json();
+
                         if (response.ok) {
-                            viewsInput.value = data.views;
-                            likesInput.value = data.likes;
-                            commentsInput.value = data.comments;
+                            alert(result.message);
+                            updateAccountList();
                         } else {
-                            alert('Ошибка при получении данных о рилсе');
+                            if (response.status === 400) {
+                                alert(result.detail);
+                            } else {
+                                alert(
+                                    result.error ||
+                                        "Ошибка при добавлении аккаунта",
+                                );
+                            }
                         }
                     } catch (error) {
-                        alert('Ошибка при получении данных о рилсе', error);
+                        alert(
+                            "Ошибка при добавлении аккаунта: " + error.message,
+                        );
                         console.error(error);
-                    }
-                }
-            }
-        });
-
-        document.getElementById('addMultipleBlacklistForm').addEventListener('submit', async (event) => {
-            event.preventDefault();
-            
-            const usernames = document.getElementById('blacklistUsernamesInput').value.split('\n').map(username => username.trim()).filter(username => username !== '');
-            const addMultipleBlacklistLoader = document.getElementById('addMultipleBlacklistLoader');
-            
-            addMultipleBlacklistLoader.style.display = 'inline-block';
-        
-            try {
-                const response = await fetch('/blacklist/multiple', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': localStorage.getItem('access_token')
-                    },
-                    body: JSON.stringify({ usernames })
-                });
-                
-                if (response.ok) {
-                    alert("Аккаунты успешно добавлены в черный список");
-                    updateBlacklist();
-                } else {
-                    alert('Ошибка при добавлении аккаунтов в черный список');
-                }
-            } catch (error) {
-                alert('Ошибка при добавлении аккаунтов в черный список', error);
-                console.error(error);
-            } finally {
-                addMultipleBlacklistLoader.style.display = 'none';
-            }
-        });
-    
-    
-        async function deleteAccount(username) {
-            if (!confirm(`Are you sure you want to delete ${username}?`)) {
-                return;
-            }
-            try {
-                const token = localStorage.getItem('access_token');
-                const response = fetch(`/accounts/${username}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': token
+                    } finally {
+                        addAccountLoader.style.display = "none";
                     }
                 });
 
-                updateAccountList();
-                
-            } catch (error) {
-                alert((error.response && error.response.message) || 'Failed to delete account');
-            }
-        }
-    
-        async function addFollowing(username) {
-            if (!confirm(`Are you sure you want to add followings for ${username}?`)) {
-                return;
-            }
-            const addFollowingLoader = document.getElementById(`addFollowingLoader-${username}`);
-            const engagement = document.getElementById('engagementRateInput').value
+                document.getElementById("updateReelsDataButton").addEventListener("click", async () => {
+                    try {
+                        const response = await fetch("/update_reels_data", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                token: localStorage.getItem("access_token"),
+                            },
+                        });
             
-            addFollowingLoader.style.display = 'inline-block';
+                        if (response.ok) {
+                            alert("Данные о рилсах успешно обновлены!");
+                            updateIntegrationList();
+                        } else {
+                            alert("Ошибка при обновлении данных о рилсах");
+                        }
+                    } catch (error) {
+                        console.error("Ошибка при обновлении данных о рилсах:", error);
+                    }
+                });
 
-            try {
-                const token = localStorage.getItem('access_token');
-                const response = await fetch('/analyze_followings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'token': token
-                    },
-                    body: JSON.stringify({ username, engagement })
+                document.addEventListener("input", async (event) => {
+                    if (event.target.classList.contains("integration-reels-url-input")) {
+                        const url = event.target.value;
+                
+                        // Находим ближайший контейнер с таблицей рилсов
+                        const container = event.target.closest("div");
+                
+                        // Извлекаем значение из скрытого поля с именем пользователя
+                        const username = container.querySelector(".integration-username-hidden").value;
+                
+                        if (url && username) {
+                            try {
+                                const response = await fetch("/fetch_reels_data", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        token: localStorage.getItem("access_token"),
+                                    },
+                                    body: JSON.stringify({ url, username }),
+                                });
+                                const data = await response.json();
+                
+                                if (response.ok) {
+                                    console.log("Fetched reel data:", data);
+                                    updateIntegrationList();
+                                } else {
+                                    alert("Ошибка при получении данных о рилсе");
+                                }
+                            } catch (error) {
+                                console.error("Ошибка при получении данных о рилсе:", error);
+                            }
+                        } else {
+                            console.error("Отсутствует URL или имя пользователя.");
+                        }
+                    }
                 });
                 
-                updateAccountList();
-            } catch (error) {
-                alert('Failed to add followings: ', error);
-                console.error(error);
-            } finally {
-                addFollowingLoader.style.display = 'none';
-            }
-        }
-    
-        async function updateAccountList() {
-            const response = await fetch('/accounts', {
-                headers: {
-                    'token': localStorage.getItem('access_token')
+                
+
+            document
+                .getElementById("addMultipleBlacklistForm")
+                .addEventListener("submit", async (event) => {
+                    event.preventDefault();
+
+                    const usernames = document
+                        .getElementById("blacklistUsernamesInput")
+                        .value.split("\n")
+                        .map((username) => username.trim())
+                        .filter((username) => username !== "");
+                    const addMultipleBlacklistLoader = document.getElementById(
+                        "addMultipleBlacklistLoader",
+                    );
+
+                    addMultipleBlacklistLoader.style.display = "inline-block";
+
+                    try {
+                        const response = await fetch("/blacklist/multiple", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                token: localStorage.getItem("access_token"),
+                            },
+                            body: JSON.stringify({ usernames }),
+                        });
+
+                        if (response.ok) {
+                            alert("Аккаунты успешно добавлены в черный список");
+                            updateBlacklist();
+                        } else {
+                            alert(
+                                "Ошибка при добавлении аккаунтов в черный список",
+                            );
+                        }
+                    } catch (error) {
+                        alert(
+                            "Ошибка при добавлении аккаунтов в черный список",
+                            error,
+                        );
+                        console.error(error);
+                    } finally {
+                        addMultipleBlacklistLoader.style.display = "none";
+                    }
+                });
+
+            async function deleteAccount(username) {
+                if (!confirm(`Are you sure you want to delete ${username}?`)) {
+                    return;
                 }
-            });
-            const accounts = await response.json();
-            
-            const accountsTableBody = document.querySelector('#accountsTableBody');
-            accountsTableBody.innerHTML = ''; // Очистить текущий список
-        
-            accounts.forEach(account => {
-                const row = document.createElement('tr');
-                const isViewed = localStorage.getItem(`viewed_${account.username}`) === 'true';
-        
-                row.innerHTML = `
+                try {
+                    const token = localStorage.getItem("access_token");
+                    const response = fetch(`/accounts/${username}`, {
+                        method: "DELETE",
+                        headers: {
+                            "Content-Type": "application/json",
+                            token: token,
+                        },
+                    });
+
+                    updateAccountList();
+                } catch (error) {
+                    alert(
+                        (error.response && error.response.message) ||
+                            "Failed to delete account",
+                    );
+                }
+            }
+
+            async function addFollowing(username) {
+                if (
+                    !confirm(
+                        `Are you sure you want to add followings for ${username}?`,
+                    )
+                ) {
+                    return;
+                }
+                const addFollowingLoader = document.getElementById(
+                    `addFollowingLoader-${username}`,
+                );
+                const engagement = document.getElementById(
+                    "engagementRateInput",
+                ).value;
+
+                addFollowingLoader.style.display = "inline-block";
+
+                try {
+                    const token = localStorage.getItem("access_token");
+                    const response = await fetch("/analyze_followings", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            token: token,
+                        },
+                        body: JSON.stringify({ username, engagement }),
+                    });
+
+                    updateAccountList();
+                } catch (error) {
+                    alert("Failed to add followings: ", error);
+                    console.error(error);
+                } finally {
+                    addFollowingLoader.style.display = "none";
+                }
+            }
+
+            async function updateAccountList() {
+                const response = await fetch("/accounts", {
+                    headers: {
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
+                const accounts = await response.json();
+
+                const accountsTableBody =
+                    document.querySelector("#accountsTableBody");
+                accountsTableBody.innerHTML = ""; // Очистить текущий список
+
+                accounts.forEach((account) => {
+                    const row = document.createElement("tr");
+                    const isViewed =
+                        localStorage.getItem(`viewed_${account.username}`) ===
+                        "true";
+
+                    row.innerHTML = `
                     <td><a href="https://www.instagram.com/${account.username}" target="_blank" onclick="markAsViewed('${account.username}', this)">${account.username}</a></td>
                     <td>${account.followers}</td>
                     <td>${account.avg_views}</td>
@@ -714,29 +865,34 @@
                         </button>
                     </td>
                 `;
-        
-                if (isViewed) {
-                    row.classList.add('viewed');
-                }
-        
-                accountsTableBody.insertBefore(row, accountsTableBody.firstChild);
-            });
-        }
 
-        async function updateIntegrationPendingList() {
-            const response = await fetch('/integration_pending', {
-                headers: {
-                    'token': localStorage.getItem('access_token')
-                }
-            });
-            const accounts = await response.json();
-            
-            const tableBody = document.querySelector('#integrationPendingTableBody');
-            tableBody.innerHTML = ''; // Очистить текущий список
-        
-            accounts.forEach(account => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
+                    if (isViewed) {
+                        row.classList.add("viewed");
+                    }
+
+                    accountsTableBody.insertBefore(
+                        row,
+                        accountsTableBody.firstChild,
+                    );
+                });
+            }
+
+            async function updateIntegrationPendingList() {
+                const response = await fetch("/integration_pending", {
+                    headers: {
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
+                const accounts = await response.json();
+
+                const tableBody = document.querySelector(
+                    "#integrationPendingTableBody",
+                );
+                tableBody.innerHTML = ""; // Очистить текущий список
+
+                accounts.forEach((account) => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
                     <td>${account.username}</td>
                     <td>${account.followers}</td>
                     <td>${account.avg_views}</td>
@@ -746,141 +902,277 @@
                         <button class="btn btn-danger btn-sm" onclick="removeFromIntegrationPending('${account.username}')">Сделка не состоялась</button>
                     </td>
                 `;
-                tableBody.appendChild(row);
-            });
-        }
-
-        async function updateIntegrationList() {
-            const response = await fetch('/integration', {
-                headers: {
-                    'token': localStorage.getItem('access_token')
-                }
-            });
-            const accounts = await response.json();
-            
-            const tableBody = document.querySelector('#integrationTableBody');
-            tableBody.innerHTML = ''; // Очистить текущий список
-        
-            accounts.forEach(account => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><input type="text" class="integration-username-input" value="${account.username}" readonly></td>
-                    <td><input type="text" class="integration-reels-url-input" value="${account.reels_url || ''}" placeholder="Reels URL"></td>
-                    <td><input type="text" class="integration-views-input" value="${account.views || ''}" placeholder="Просмотры" readonly></td>
-                    <td><input type="text" class="integration-likes-input" value="${account.likes || ''}" placeholder="Лайки" readonly></td>
-                    <td><input type="text" class="integration-comments-input" value="${account.comments || ''}" placeholder="Комментарии" readonly></td>
-                `;
-                tableBody.appendChild(row);
-            });
-        }
-
-        function markAsViewed(username, linkElement) {
-            localStorage.setItem(`viewed_${username}`, 'true');
-            const row = linkElement.closest('tr');
-            row.classList.add('viewed');
-        }
-    
-        document.addEventListener('DOMContentLoaded', (event) => {
-            const messageForm = document.getElementById('messageForm');
-            const messageInput = document.getElementById('messageInput');
-            const savedMessage = localStorage.getItem('lastMessage');
-    
-            if (savedMessage) {
-                messageInput.value = savedMessage;
+                    tableBody.appendChild(row);
+                });
             }
-    
-            document.getElementById('toggleMessageFormButton').addEventListener('click', () => {
-                if (messageForm.style.display === 'none' || messageForm.style.display === '') {
-                    messageForm.style.display = 'block';
-                } else {
-                    messageForm.style.display = 'none';
+
+            async function updateIntegrationList() {
+                try {
+                    const response = await fetch("/integration", {
+                        headers: {
+                            token: localStorage.getItem("access_token"),
+                        },
+                    });
+                    const accounts = await response.json();
+            
+                    console.log("Fetched accounts:", accounts); // Отладочное сообщение
+            
+                    const tableBody = document.querySelector("#integrationTableBody");
+                    tableBody.innerHTML = ""; // Очистить текущий список
+            
+                    accounts.forEach((account) => {
+                        // Создать таблицу для рилсов
+                        const reelsTable = `
+                            <div style="overflow-y: auto; max-height: 200px; border: 1px solid #ddd; padding: 5px;">
+                                <input type="hidden" class="integration-username-hidden" value="${account.username}">
+                                <table style="width: 100%; border-collapse: collapse;">
+                                    <thead>
+                                        <tr>
+                                            <th>Reels URL</th>
+                                            <th>Просмотры</th>
+                                            <th>Лайки</th>
+                                            <th>Комментарии</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${
+                                            (account.reels || [])
+                                                .map(
+                                                    (reel) => `
+                                                    <tr>
+                                                        <td><input type="text" class="integration-reels-url-input" value="${reel.url}" placeholder="Reels URL"></td>
+                                                        <td><input type="text" class="integration-views-input" value="${reel.views}" placeholder="Просмотры" readonly></td>
+                                                        <td><input type="text" class="integration-likes-input" value="${reel.likes}" placeholder="Лайки" readonly></td>
+                                                        <td><input type="text" class="integration-comments-input" value="${reel.comments}" placeholder="Комментарии" readonly></td>
+                                                    </tr>
+                                                `,
+                                                )
+                                                .join("") || "<tr><td colspan='4'>Нет рилсов</td></tr>"
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button style="margin-top: 10px;" onclick="addReelField(this)">Добавить рилс</button>
+                        `;
+            
+                        // Создать строку таблицы
+                        const row = document.createElement("tr");
+                        row.innerHTML = `
+                            <td><input type="text" class="integration-username-input" value="${account.username}" readonly></td>
+                            <td>${reelsTable}</td>
+                            <td>${account.median_views || 0}</td>
+                            <td>${account.median_likes || 0}</td>
+                            <td>${account.median_comments || 0}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } catch (error) {
+                    console.error("Error fetching integration data:", error);
                 }
-            });
-    
-            document.getElementById('sendMessageButton').addEventListener('click', () => {
-                const message = messageInput.value;
-                if (message.trim() === '') {
-                    alert('Сообщение не может быть пустым.');
+            }
+            
+            function addReelField(button) {
+                // Найти родительский элемент контейнера таблицы рилсов
+                const reelsContainer = button.closest("td").querySelector("div");
+            
+                // Проверить, что контейнер найден
+                if (!reelsContainer) {
+                    console.error("Не удалось найти контейнер таблицы рилсов.");
                     return;
                 }
-    
-                localStorage.setItem('lastMessage', message);
-                messageForm.style.display = 'none';
-                alert('Сообщение сохранено: ' + message);
-            });
-        });
-
-        document.getElementById('logoutButton').addEventListener('click', () => {
-            // Удаление токена из localStorage
-            localStorage.removeItem('access_token');
-            // Перенаправление на страницу входа
-            window.location.href = '/';
-        });
-
-        document.getElementById('toggleBlacklistFormButton').addEventListener('click', () => {
-            const form = document.getElementById('addMultipleBlacklistForm');
-            if (form.style.display === 'none' || form.style.display === '') {
-                form.style.display = 'block';
-            } else {
-                form.style.display = 'none';
+            
+                // Найти tbody вложенной таблицы внутри контейнера
+                const reelsTableBody = reelsContainer.querySelector("tbody");
+            
+                // Проверить, что tbody найден
+                if (!reelsTableBody) {
+                    console.error("Не удалось найти таблицу рилсов.");
+                    return;
+                }
+            
+                // Создать новую строку для рилса
+                const newRow = `
+                    <tr>
+                        <td><input type="text" class="integration-reels-url-input" placeholder="Reels URL"></td>
+                        <td><input type="text" class="integration-views-input" placeholder="Просмотры" readonly></td>
+                        <td><input type="text" class="integration-likes-input" placeholder="Лайки" readonly></td>
+                        <td><input type="text" class="integration-comments-input" placeholder="Комментарии" readonly></td>
+                    </tr>
+                `;
+            
+                // Добавить новую строку в таблицу
+                reelsTableBody.insertAdjacentHTML("beforeend", newRow);
             }
-        });
-
-        async function sendMessage(username) {
-            const lastMessage = localStorage.getItem('lastMessage');
-            navigator.clipboard.writeText(lastMessage).then(async () => {
-            window.open(`https://ig.me/m/${username}`, '_blank');
-            await fetch(`/move_to_integration_pending/${username}`, {
-                method: 'POST',
-                headers: {
-                'Content-Type': 'application/json',
-                'token': localStorage.getItem('access_token')
+            
+            async function saveReels(button) {
+                const container = button.closest("div");
+                const username = container.querySelector(".integration-username-hidden").value;
+            
+                const reels = Array.from(container.querySelectorAll("tbody tr")).map((row) => {
+                    const url = row.querySelector(".integration-reels-url-input").value;
+                    const views = row.querySelector(".integration-views-input").value;
+                    const likes = row.querySelector(".integration-likes-input").value;
+                    const comments = row.querySelector(".integration-comments-input").value;
+                    return { url, views, likes, comments };
+                });
+            
+                try {
+                    const response = await fetch("/save_reels", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            token: localStorage.getItem("access_token"),
+                        },
+                        body: JSON.stringify({ username, reels }),
+                    });
+            
+                    if (response.ok) {
+                        alert("Рилсы сохранены успешно!");
+                        updateIntegrationList();
+                    } else {
+                        alert("Ошибка при сохранении рилсов");
+                    }
+                } catch (error) {
+                    console.error("Ошибка при сохранении рилсов:", error);
                 }
-            });
-            updateAccountList();
-            updateIntegrationPendingList();
-            }).catch(err => {
-            console.error('Ошибка копирования в буфер обмена: ', err);
-            });
-        }
-
-        async function completeDeal(username) {
-            await fetch(`/move_to_integration/${username}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': localStorage.getItem('access_token')
-                }
-            });
-            updateIntegrationPendingList();
-            updateIntegrationList();
-        }
-
-        async function removeFromIntegrationPending(username) {
-            await fetch(`/remove_from_integration_pending/${username}`, {
-                method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'token': localStorage.getItem('access_token')
-                }
-            });
-            updateIntegrationPendingList();
-        }
-        
-        window.onscroll = function() {
-            const scrollToTopButton = document.getElementById('scrollToTopButton');
-            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-                scrollToTopButton.style.display = 'block';
-            } else {
-                scrollToTopButton.style.display = 'none';
             }
-        };
-    
-        // Прокрутка наверх
-        function scrollToTop() {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+            
 
-    </script>
-</body>
+            function markAsViewed(username, linkElement) {
+                localStorage.setItem(`viewed_${username}`, "true");
+                const row = linkElement.closest("tr");
+                row.classList.add("viewed");
+            }
+
+            document.addEventListener("DOMContentLoaded", (event) => {
+                const messageForm = document.getElementById("messageForm");
+                const messageInput = document.getElementById("messageInput");
+                const savedMessage = localStorage.getItem("lastMessage");
+
+                if (savedMessage) {
+                    messageInput.value = savedMessage;
+                }
+
+                document
+                    .getElementById("toggleMessageFormButton")
+                    .addEventListener("click", () => {
+                        if (
+                            messageForm.style.display === "none" ||
+                            messageForm.style.display === ""
+                        ) {
+                            messageForm.style.display = "block";
+                        } else {
+                            messageForm.style.display = "none";
+                        }
+                    });
+
+                document
+                    .getElementById("sendMessageButton")
+                    .addEventListener("click", () => {
+                        const message = messageInput.value;
+                        if (message.trim() === "") {
+                            alert("Сообщение не может быть пустым.");
+                            return;
+                        }
+
+                        localStorage.setItem("lastMessage", message);
+                        messageForm.style.display = "none";
+                        alert("Сообщение сохранено: " + message);
+                    });
+            });
+
+            document
+                .getElementById("logoutButton")
+                .addEventListener("click", () => {
+                    // Удаление токена из localStorage
+                    localStorage.removeItem("access_token");
+                    // Перенаправление на страницу входа
+                    window.location.href = "/";
+                });
+
+            document
+                .getElementById("toggleBlacklistFormButton")
+                .addEventListener("click", () => {
+                    const form = document.getElementById(
+                        "addMultipleBlacklistForm",
+                    );
+                    if (
+                        form.style.display === "none" ||
+                        form.style.display === ""
+                    ) {
+                        form.style.display = "block";
+                    } else {
+                        form.style.display = "none";
+                    }
+                });
+
+            async function sendMessage(username) {
+                const lastMessage = localStorage.getItem("lastMessage");
+                navigator.clipboard
+                    .writeText(lastMessage)
+                    .then(async () => {
+                        window.open(`https://ig.me/m/${username}`, "_blank");
+                        await fetch(
+                            `/move_to_integration_pending/${username}`,
+                            {
+                                method: "POST",
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    token: localStorage.getItem("access_token"),
+                                },
+                            },
+                        );
+                        updateAccountList();
+                        updateIntegrationPendingList();
+                    })
+                    .catch((err) => {
+                        console.error(
+                            "Ошибка копирования в буфер обмена: ",
+                            err,
+                        );
+                    });
+            }
+
+            async function completeDeal(username) {
+                await fetch(`/move_to_integration/${username}`, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
+                updateIntegrationPendingList();
+                updateIntegrationList();
+            }
+
+            async function removeFromIntegrationPending(username) {
+                await fetch(`/remove_from_integration_pending/${username}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                        token: localStorage.getItem("access_token"),
+                    },
+                });
+                updateIntegrationPendingList();
+            }
+
+            window.onscroll = function () {
+                const scrollToTopButton =
+                    document.getElementById("scrollToTopButton");
+                if (
+                    document.body.scrollTop > 20 ||
+                    document.documentElement.scrollTop > 20
+                ) {
+                    scrollToTopButton.style.display = "block";
+                } else {
+                    scrollToTopButton.style.display = "none";
+                }
+            };
+
+            // Прокрутка наверх
+            function scrollToTop() {
+                window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+        </script>
+    </body>
 </html>

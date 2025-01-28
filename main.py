@@ -68,13 +68,25 @@ class InstagramAccount(BaseModel):
     followers: int
     avg_views: int
     reels_with_10000_views: int
-    
+
+class ReelData(BaseModel):
+    url: str
+    views: int
+    likes: int
+    comments: int
+
+class ReelsPayload(BaseModel):
+    reels: List[ReelData]
+
 class IntegrationAccout(BaseModel):
     username: str
-    reels_url: Optional[str] = None
-    views: Optional[int] = None
-    likes: Optional[int] = None
-    comments: Optional[int] = None
+    
+class IntegrationsPayload(BaseModel):
+    username: str
+    median_views: int
+    median_likes: int
+    median_comments: int
+    reels: List[ReelData]
 
 class TokenData(BaseModel):
     username: str
@@ -152,9 +164,47 @@ def remove_from_integration_pending(username: str, current_user: dict = Depends(
         db_integration_pending[user] = [acc for acc in db_integration_pending[user] if acc["username"] != username]
     return {"message": "Account removed from integration pending"}
 
-@app.get("/integration", response_model=List[IntegrationAccout])
+def calculate_median(data):
+    sorted_data = sorted(data)
+    n = len(sorted_data)
+    if n == 0:
+        return 0
+    if n % 2 == 1:
+        return sorted_data[n // 2]
+    else:
+        return (sorted_data[n // 2 - 1] + sorted_data[n // 2]) / 2
+
+@app.get("/integration", response_model=List[IntegrationsPayload])
 def get_integration(current_user: dict = Depends(get_current_user)):
-    return db_integration.get(current_user["username"], [])
+    accounts = db_integration.get(current_user["username"], [])
+    for account in accounts:
+        if "reels" in account:
+            views = [reel['views'] for reel in account['reels']]
+            likes = [reel['likes'] for reel in account['reels']]
+            comments = [reel['comments'] for reel in account['reels']]
+            account['median_views'] = int(calculate_median(views))
+            account['median_likes'] = int(calculate_median(likes))
+            account['median_comments'] = int(calculate_median(comments))
+        else:
+            account['median_views'] = 0
+            account['median_likes'] = 0
+            account['median_comments'] = 0
+            account['reels'] = []
+    return accounts
+
+@app.post("/integration/{username}/reels")
+def add_reels_to_integration(username: str, payload: ReelsPayload, current_user: dict = Depends(get_current_user)):
+    user = current_user["username"]
+    if user not in db_integration:
+        db_integration[user] = []
+    account = next((acc for acc in db_integration[user] if acc["username"] == username), None)
+    if not account:
+        account = {"username": username, "reels": []}
+        db_integration[user].append(account)
+
+    # Перезаписываем рилсы из запроса
+    account["reels"] = [r.model_dump() for r in payload.reels]
+    return {"message": "Reels updated successfully"}
 
 @app.post("/move_to_integration/{username}")
 def move_to_integration(username: str, current_user: dict = Depends(get_current_user)):
@@ -191,10 +241,10 @@ def remove_from_blacklist(username: str, current_user: dict = Depends(get_curren
 async def add_multiple_to_blacklist(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
     usernames = data.get("usernames", [])
-    
+
     if not usernames:
         raise HTTPException(status_code=400, detail="Usernames are required")
-    
+
     if current_user["username"] not in db_blacklist:
         db_blacklist[current_user["username"]] = []
 
@@ -204,7 +254,7 @@ async def add_multiple_to_blacklist(request: Request, current_user: dict = Depen
             account = {"username": username}
             db_blacklist[current_user["username"]].append(account)
             added_accounts.append(account)
-    
+
     return added_accounts
 
 @app.get("/accounts", response_model=List[InstagramAccount])
@@ -216,13 +266,13 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     data = await request.json()
     username = data.get("username")
     engagement = data.get("engagement")
-    
+
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
-    
+
     if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
         raise HTTPException(status_code=400, detail="Account is blacklisted")
-    
+
     async with aiohttp.ClientSession() as session:
         profile_url = f"https://{RAPIDAPI_HOST}/v1/info"
         async with session.get(profile_url, headers=HEADERS, params={"username_or_id_or_url": username}) as profile_response:
@@ -230,10 +280,10 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
                 raise HTTPException(status_code=400, detail="Failed to fetch profile information")
             data = await profile_response.json()
             followers_count = data['data']['follower_count']
-            
+
             if followers_count > 80000:
                 raise HTTPException(status_code=400, detail="Too many followers in account")
-        
+
         reels = []
         pagination_token = None
         for _ in range(4):
@@ -246,35 +296,35 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
                 if reels_response.status != 200:
                     break
                 reels_data = await reels_response.json()
-                
+
                 reels.extend(reels_data['data']['items'])
                 pagination_token = reels_data.get('pagination_token')
                 if not pagination_token:
                     break
-        
+
         if engagement:
             engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
             median_engagement = sorted(engagements)[len(engagements) // 2] if engagements else 0
             if median_engagement < int(engagement):
                 raise HTTPException(status_code=400, detail="Engagement is too low")
-        
+
         if not reels:
             raise HTTPException(status_code=400, detail="No reels found for this account")
-        
+
         views = [reel['play_count'] for reel in reels if 'play_count' in reel]
         avg_views = int(sum(views) / len(views))
         reels_with_10000_views = sum(1 for view in views if view > 10000)
-        
+
         if reels_with_10000_views < 3:
             raise HTTPException(status_code=400, detail="Few reels with 10k views")
-        
+
         if avg_views < 3000:
             raise HTTPException(status_code=400, detail="Few avg views")
 
         # Save to database
         if current_user["username"] not in db_accounts:
             db_accounts[current_user["username"]] = []
-            
+
         db_accounts[current_user["username"]].append({
             "username": username,
             "followers": followers_count,
@@ -300,7 +350,7 @@ def delete_account(ig_username: str, current_user: dict = Depends(get_current_us
     db_accounts[username] = [
         acc for acc in db_accounts[username] if acc['username'] != ig_username
     ]
-    
+
     if username not in db_blacklist:
         db_blacklist[username] = []
     db_blacklist[username].append({"username": ig_username})
@@ -335,7 +385,7 @@ async def fetch_reels(session, user_id, max_pages=3):
     return reels
 
 async def process_followings(username, current_user, engagement):
-    
+
     async with aiohttp.ClientSession() as session:
         # Получаем список followings
         followings_data = await fetch_followings(session, username)
@@ -352,26 +402,26 @@ async def process_user(session, user_id, engagement, current_user):
     # Получаем профиль пользователя
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
-    
+
     if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
         return
-    
+
     followers_count = profile_data['data']['follower_count']
-    
+
     if followers_count > 80000:
         return
 
     # Получаем рилсы
     reels = await fetch_reels(session, user_id)
     del reels[:2]
-    
+
     views = [reel['play_count'] for reel in reels if 'play_count' in reel]
     avg_views = int(sum(views) / len(views)) if views else 0
     reels_with_10000_views = sum(1 for view in views if view > 10000)
-    
+
     if reels_with_10000_views < 3:
         return
-    
+
     if avg_views < 3000:
         return
 
@@ -418,7 +468,7 @@ async def analyze_followings(request: Request, current_user: dict = Depends(get_
 
     # if current_user["username"] not in db_accounts:
     #     db_accounts[current_user["username"]] = []
-    
+
     # for i in range(10):
     #     db_accounts[current_user["username"]].append({
     #             "username": f"Roma_{i}",
@@ -428,56 +478,73 @@ async def analyze_followings(request: Request, current_user: dict = Depends(get_
     #         })
     # return {"message": "Accounts analyzed successfully"}
 
+@app.post("/update_reels_data")
+async def update_reels_data(request: Request, current_user: dict = Depends(get_current_user)):
+    if current_user["username"] not in db_integration:
+        raise HTTPException(status_code=404, detail="No integration accounts found")
+
+    accounts = db_integration[current_user["username"]]
+    for account in accounts:
+        username = account["username"]
+        if "reels" in account:
+            for reel in account["reels"]:
+                url = reel["url"]
+                reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
+                params = {"code_or_id_or_url": url}
+
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(reels_url, headers=HEADERS, params=params) as response:
+                        if response.status != 200:
+                            continue
+                        reels_data_json = await response.json()
+                        reels_data = reels_data_json['data']['metrics']
+
+                reel["views"] = reels_data.get("play_count", 0)
+                reel["likes"] = reels_data.get("like_count", 0)
+                reel["comments"] = reels_data.get("comment_count", 0)
+
+    return {"message": "Reels data updated successfully"}
+
 @app.post("/fetch_reels_data")
 async def fetch_reels_data(request: Request, current_user: dict = Depends(get_current_user)):
     data = await request.json()
     url = data.get('url')
     username = data.get('username')
     reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
-    
+
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
-    
+
     params = {"code_or_id_or_url": url}
-    
-    # Здесь добавьте логику для получения данных о рилсе по URL
-    # Например, используйте aiohttp для выполнения запроса к API Instagram
+
     async with aiohttp.ClientSession() as session:
         async with session.get(reels_url, headers=HEADERS, params=params) as response:
             if response.status != 200:
                 raise HTTPException(status_code=response.status, detail="Failed to fetch reels data")
             reels_data_json = await response.json()
             reels_data = reels_data_json['data']['metrics']
-            
-    # Пример данных, которые могут быть возвращены
+
     data = {
+        "url": url,
         "views": reels_data.get("play_count", 0),
         "likes": reels_data.get("like_count", 0),
         "comments": reels_data.get("comment_count", 0)
     }
-    
-    # Ensure the integration table exists for the current user
+
     if current_user["username"] not in db_integration:
         db_integration[current_user["username"]] = []
-    
-    # Find the account by username and update its information
+
     account = next((acc for acc in db_integration[current_user["username"]] if acc["username"] == username), None)
     if account:
-        account.update({
-            "reels_url": url,
-            "views": data["views"],
-            "likes": data["likes"],
-            "comments": data["comments"]
-        })
+        if "reels" not in account:
+            account["reels"] = []
+        account["reels"].append(data)
     else:
         db_integration[current_user["username"]].append({
             "username": username,
-            "reels_url": url,
-            "views": data["views"],
-            "likes": data["likes"],
-            "comments": data["comments"]
+            "reels": [data]
         })
-    
+
     return data
 
 # Frontend HTML serving
