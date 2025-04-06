@@ -42,7 +42,6 @@ db_blacklist = {}
 db_integration_pending = {}
 db_integration = {}
 
-
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
