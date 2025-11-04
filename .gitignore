@@ -1,3 +1,5 @@
 venv/
 frontend/node_modules
 *.db
+__pycache__/
+*.pyc
