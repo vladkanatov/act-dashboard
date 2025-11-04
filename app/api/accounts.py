@@ -4,9 +4,12 @@ Instagram accounts management endpoints
 import aiohttp
 from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import InstagramAccount
-from app.db import db_accounts, db_blacklist
+from app.database import get_db
+from app.db_models import User
+from app import crud
 from app.security import get_current_user
 from app.core import config
 from app.services.instagram import process_followings, fetch_profile, fetch_reels
@@ -15,12 +18,25 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
 @router.get("", response_model=List[InstagramAccount])
-def get_accounts(current_user: dict = Depends(get_current_user)):
-    return db_accounts.get(current_user["username"], [])
+async def get_accounts(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    accounts = await crud.get_accounts(db, current_user.id)
+    return [
+        InstagramAccount(
+            username=acc.username,
+            followers=acc.followers,
+            avg_views=acc.avg_views,
+            reels_with_10000_views=acc.reels_with_10000_views
+        )
+        for acc in accounts
+    ]
 
 
 @router.post("")
-async def add_account(request: Request, current_user: dict = Depends(get_current_user)):
+async def add_account(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     data = await request.json()
     username = data.get("username")
     engagement = data.get("engagement")
@@ -31,7 +47,7 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
-    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
+    if await crud.is_blacklisted(db, current_user.id, username):
         raise HTTPException(status_code=400, detail="Account is blacklisted")
 
     async with aiohttp.ClientSession() as session:
@@ -65,15 +81,14 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
             raise HTTPException(status_code=400, detail="Few avg views")
 
         # Save to database
-        if current_user["username"] not in db_accounts:
-            db_accounts[current_user["username"]] = []
-
-        db_accounts[current_user["username"]].append({
-            "username": username,
-            "followers": followers_count,
-            "avg_views": avg_views,
-            "reels_with_10000_views": reels_with_10000_views
-        })
+        await crud.create_account(
+            db,
+            user_id=current_user.id,
+            username=username,
+            followers=followers_count,
+            avg_views=avg_views,
+            reels_with_10000_views=reels_with_10000_views
+        )
         
         if config.DEBUG_MODE:
             print(f"🔧 DEBUG: Account {username} added successfully (followers: {followers_count}, avg_views: {avg_views})")
@@ -82,26 +97,35 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
 
 
 @router.delete("/{ig_username}")
-def delete_account(ig_username: str, current_user: dict = Depends(get_current_user)):
-    username = current_user["username"]
-    if username not in db_accounts:
-        raise HTTPException(status_code=404, detail="No accounts found")
-    db_accounts[username] = [
-        acc for acc in db_accounts[username] if acc['username'] != ig_username
-    ]
-
-    if username not in db_blacklist:
-        db_blacklist[username] = []
-    db_blacklist[username].append({"username": ig_username})
+async def delete_account(
+    ig_username: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # Delete account
+    deleted = await crud.delete_account(db, current_user.id, ig_username)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    # Add to blacklist
+    await crud.add_to_blacklist(db, current_user.id, ig_username)
     return {"message": "Account deleted successfully"}
 
 
 @router.post("/analyze_followings")
-async def analyze_followings(request: Request, current_user: dict = Depends(get_current_user)):
+async def analyze_followings(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
     data = await request.json()
     engagement = data.get("engagement")
     username = data.get("username")
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
-    await process_followings(username, current_user, engagement)
+    
+    # Process followings with database session passed in user dict for compatibility
+    user_dict = {"username": current_user.username, "id": current_user.id, "db": db}
+    await process_followings(username, user_dict, engagement)
     return {"message": "Accounts analyzed successfully"}
+

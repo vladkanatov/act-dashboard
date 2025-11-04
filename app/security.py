@@ -1,10 +1,12 @@
 import jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-from fastapi import HTTPException, Header
+from fastapi import HTTPException, Header, Depends
 from .core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 from fastapi.security import OAuth2PasswordBearer
-from .db import get_user
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.database import get_db
+from app import crud
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
@@ -26,7 +28,8 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(minutes
     return encoded_jwt
 
 
-def get_current_user(token: str = Header(None)):
+async def get_current_user(token: str = Header(None), db: AsyncSession = Depends(get_db)):
+    """Get current user from token with database lookup"""
     if token is None:
         raise HTTPException(status_code=401, detail="Token missing")
     try:
@@ -34,6 +37,12 @@ def get_current_user(token: str = Header(None)):
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        return get_user(username)
+        
+        user = await crud.get_user_by_username(db, username)
+        if user is None:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return user
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+

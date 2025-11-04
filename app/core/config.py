@@ -1,4 +1,5 @@
 from datetime import timedelta
+import os
 
 # Debug mode flag - can be set at runtime
 DEBUG_MODE = False
@@ -13,3 +14,9 @@ HEADERS = {
     "X-RapidAPI-Key": RAPIDAPI_KEY,
     "X-RapidAPI-Host": RAPIDAPI_HOST
 }
+
+# Database configuration
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/instagram_dashboard"
+)

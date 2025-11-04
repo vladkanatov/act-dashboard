@@ -815,7 +815,7 @@
 
                 try {
                     const token = localStorage.getItem("access_token");
-                    const response = await fetch("/analyze_followings", {
+                    const response = await fetch("/accounts/analyze_followings", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",

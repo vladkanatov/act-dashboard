@@ -3,8 +3,6 @@ import asyncio
 from typing import List
 
 from app.core import config
-from app.db import save_to_db, db_blacklist
-
 
 # Conditional import of mock functions
 def _get_mock_functions():
@@ -64,8 +62,12 @@ async def process_user(session, user_id, engagement, current_user):
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
 
-    if any(acc['username'] == username for acc in db_blacklist.get(current_user["username"], [])):
-        return
+    # Check blacklist using database
+    from app import crud
+    if "db" in current_user:
+        is_blacklisted = await crud.is_blacklisted(current_user["db"], current_user["id"], username)
+        if is_blacklisted:
+            return
 
     followers_count = profile_data['data']['follower_count']
 
@@ -104,7 +106,21 @@ async def process_followings(username, current_user, engagement):
             tasks.append(process_user(session, user_id, engagement, current_user))
         results = await asyncio.gather(*tasks)
 
-        save_to_db(results, current_user["username"])
+        # Save to database
+        from app import crud
+        if "db" in current_user and "id" in current_user:
+            db = current_user["db"]
+            for result in results:
+                if result:  # Ensure the result is not None
+                    await crud.create_account(
+                        db,
+                        user_id=current_user["id"],
+                        username=result[0],
+                        followers=result[1],
+                        avg_views=result[2],
+                        reels_with_10000_views=result[3]
+                    )
+
 
 
 async def fetch_reels_data_api(url: str):
