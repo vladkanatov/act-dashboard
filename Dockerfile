@@ -39,4 +39,4 @@ EXPOSE 8000
 
 # Production command: use uvicorn with multiple workers
 # If you prefer to run with reload (dev), override the command in docker-compose
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
