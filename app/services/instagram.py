@@ -1,22 +1,9 @@
 import aiohttp
 import asyncio
 from typing import List
-from ..app.core import config as cfg  # fallback if used as package
-from .core import config as _cfg  # type: ignore
-from .db import save_to_db, db_blacklist, db_accounts, db_integration
 
-# The above import patterns try to be resilient to package import styles.
-# Use config values from app.core.config via relative import when resolved.
-try:
-    from app.core.config import RAPIDAPI_HOST, HEADERS
-except Exception:
-    try:
-        RAPIDAPI_HOST = _cfg.RAPIDAPI_HOST
-        HEADERS = _cfg.HEADERS
-    except Exception:
-        # Last resort default values (should be overridden by config)
-        RAPIDAPI_HOST = "instagram-scraper-api2.p.rapidapi.com"
-        HEADERS = {}
+from app.core.config import RAPIDAPI_HOST, HEADERS
+from app.db import save_to_db, db_blacklist
 
 
 async def fetch_followings(session, username):

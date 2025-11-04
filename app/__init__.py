@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.api import auth, accounts, integration, blacklist, frontend
+
 app = FastAPI()
 
 app.add_middleware(
@@ -15,10 +17,9 @@ app.add_middleware(
 # Mount static folder from repo root
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Include API routes
-try:
-    from .api.routes import router as api_router
-    app.include_router(api_router)
-except Exception:
-    # during initial import (before routes exist) ignore
-    pass
+# Include all API routers
+app.include_router(auth.router)
+app.include_router(accounts.router)
+app.include_router(integration.router)
+app.include_router(blacklist.router)
+app.include_router(frontend.router)
