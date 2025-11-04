@@ -2,31 +2,50 @@ import aiohttp
 import asyncio
 from typing import List
 
-from app.core.config import RAPIDAPI_HOST, HEADERS
+from app.core import config
 from app.db import save_to_db, db_blacklist
 
 
+# Conditional import of mock functions
+def _get_mock_functions():
+    """Lazy import of mock functions to avoid circular imports"""
+    from app.services import mock_instagram
+    return mock_instagram
+
+
 async def fetch_followings(session, username):
-    url = f"https://{RAPIDAPI_HOST}/v1/following"
-    async with session.get(url, headers=HEADERS, params={"username_or_id_or_url": username}) as response:
+    if config.DEBUG_MODE:
+        mock = _get_mock_functions()
+        return await mock.mock_fetch_followings(session, username)
+    
+    url = f"https://{config.RAPIDAPI_HOST}/v1/following"
+    async with session.get(url, headers=config.HEADERS, params={"username_or_id_or_url": username}) as response:
         return await response.json()
 
 
 async def fetch_profile(session, user_id):
-    url = f"https://{RAPIDAPI_HOST}/v1/info"
-    async with session.get(url, headers=HEADERS, params={"username_or_id_or_url": user_id}) as response:
+    if config.DEBUG_MODE:
+        mock = _get_mock_functions()
+        return await mock.mock_fetch_profile(session, user_id)
+    
+    url = f"https://{config.RAPIDAPI_HOST}/v1/info"
+    async with session.get(url, headers=config.HEADERS, params={"username_or_id_or_url": user_id}) as response:
         return await response.json()
 
 
 async def fetch_reels(session, user_id, max_pages=3):
+    if config.DEBUG_MODE:
+        mock = _get_mock_functions()
+        return await mock.mock_fetch_reels(session, user_id, max_pages)
+    
     reels = []
     pagination_token = None
     for _ in range(max_pages):
-        url = f"https://{RAPIDAPI_HOST}/v1.2/reels"
+        url = f"https://{config.RAPIDAPI_HOST}/v1.2/reels"
         params = {"username_or_id_or_url": user_id}
         if pagination_token:
             params["pagination_token"] = pagination_token
-        async with session.get(url, headers=HEADERS, params=params) as response:
+        async with session.get(url, headers=config.HEADERS, params=params) as response:
             if response.status != 200:
                 break
             data = await response.json()
@@ -38,6 +57,10 @@ async def fetch_reels(session, user_id, max_pages=3):
 
 
 async def process_user(session, user_id, engagement, current_user):
+    if config.DEBUG_MODE:
+        mock = _get_mock_functions()
+        return await mock.mock_process_user(session, user_id, engagement, current_user)
+    
     profile_data = await fetch_profile(session, user_id)
     username = profile_data['data']['username']
 
@@ -85,10 +108,16 @@ async def process_followings(username, current_user, engagement):
 
 
 async def fetch_reels_data_api(url: str):
-    reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
+    if config.DEBUG_MODE:
+        mock = _get_mock_functions()
+        return await mock.mock_fetch_reels_data_api(url)
+    
+    reels_url = f"https://{config.RAPIDAPI_HOST}/v1/post_info"
     params = {"code_or_id_or_url": url}
     async with aiohttp.ClientSession() as session:
-        async with session.get(reels_url, headers=HEADERS, params=params) as response:
+        async with session.get(reels_url, headers=config.HEADERS, params=params) as response:
             if response.status != 200:
                 return None
             return await response.json()
+
+

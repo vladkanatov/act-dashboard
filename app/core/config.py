@@ -1,5 +1,8 @@
 from datetime import timedelta
 
+# Debug mode flag - can be set at runtime
+DEBUG_MODE = False
+
 SECRET_KEY = "your_secret_key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 100000

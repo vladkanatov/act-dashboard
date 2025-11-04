@@ -8,8 +8,8 @@ from typing import List
 from app.models import InstagramAccount
 from app.db import db_accounts, db_blacklist
 from app.security import get_current_user
-from app.core.config import RAPIDAPI_HOST, HEADERS
-from app.services.instagram import process_followings
+from app.core import config
+from app.services.instagram import process_followings, fetch_profile, fetch_reels
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -24,7 +24,10 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
     data = await request.json()
     username = data.get("username")
     engagement = data.get("engagement")
-
+    
+    if config.DEBUG_MODE:
+        print(f"🔧 DEBUG: Processing account {username} with engagement {engagement}")
+    
     if not username:
         raise HTTPException(status_code=400, detail="Username is required")
 
@@ -32,33 +35,15 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
         raise HTTPException(status_code=400, detail="Account is blacklisted")
 
     async with aiohttp.ClientSession() as session:
-        profile_url = f"https://{RAPIDAPI_HOST}/v1/info"
-        async with session.get(profile_url, headers=HEADERS, params={"username_or_id_or_url": username}) as profile_response:
-            if profile_response.status != 200:
-                raise HTTPException(status_code=400, detail="Failed to fetch profile information")
-            data = await profile_response.json()
-            followers_count = data['data']['follower_count']
+        # Fetch profile using the service function (supports debug mode)
+        profile_data = await fetch_profile(session, username)
+        followers_count = profile_data['data']['follower_count']
 
-            if followers_count > 80000:
-                raise HTTPException(status_code=400, detail="Too many followers in account")
+        if followers_count > 80000:
+            raise HTTPException(status_code=400, detail="Too many followers in account")
 
-        reels = []
-        pagination_token = None
-        for _ in range(4):
-            reels_url = f"https://{RAPIDAPI_HOST}/v1.2/reels"
-            params = {"username_or_id_or_url": username}
-            if pagination_token:
-                params["pagination_token"] = pagination_token
-
-            async with session.get(reels_url, headers=HEADERS, params=params) as reels_response:
-                if reels_response.status != 200:
-                    break
-                reels_data = await reels_response.json()
-
-                reels.extend(reels_data['data']['items'])
-                pagination_token = reels_data.get('pagination_token')
-                if not pagination_token:
-                    break
+        # Fetch reels using the service function (supports debug mode)
+        reels = await fetch_reels(session, username, max_pages=4)
 
         if engagement:
             engagements = [(reel['like_count'] + reel['comment_count']) / followers_count * 100 for reel in reels]
@@ -89,6 +74,10 @@ async def add_account(request: Request, current_user: dict = Depends(get_current
             "avg_views": avg_views,
             "reels_with_10000_views": reels_with_10000_views
         })
+        
+        if config.DEBUG_MODE:
+            print(f"🔧 DEBUG: Account {username} added successfully (followers: {followers_count}, avg_views: {avg_views})")
+        
         return {"message": "Account added successfully"}
 
 

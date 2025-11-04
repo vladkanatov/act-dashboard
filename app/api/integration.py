@@ -8,7 +8,8 @@ from typing import List
 from app.models import InstagramAccount, ReelsPayload, IntegrationsPayload
 from app.db import db_integration, db_integration_pending, db_accounts, calculate_median
 from app.security import get_current_user
-from app.core.config import RAPIDAPI_HOST, HEADERS
+from app.core import config
+from app.services.instagram import fetch_reels_data_api
 
 router = APIRouter(tags=["integration"])
 
@@ -95,16 +96,14 @@ async def update_reels_data(request: Request, current_user: dict = Depends(get_c
         if "reels" in account:
             for reel in account["reels"]:
                 url = reel["url"]
-                reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
-                params = {"code_or_id_or_url": url}
-
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(reels_url, headers=HEADERS, params=params) as response:
-                        if response.status != 200:
-                            continue
-                        reels_data_json = await response.json()
-                        reels_data = reels_data_json['data']['metrics']
-
+                
+                # Use the service function that supports debug mode
+                reels_data_json = await fetch_reels_data_api(url)
+                
+                if reels_data_json is None:
+                    continue
+                    
+                reels_data = reels_data_json['data']['metrics']
                 reel["views"] = reels_data.get("play_count", 0)
                 reel["likes"] = reels_data.get("like_count", 0)
                 reel["comments"] = reels_data.get("comment_count", 0)
@@ -117,19 +116,17 @@ async def fetch_reels_data(request: Request, current_user: dict = Depends(get_cu
     data = await request.json()
     url = data.get('url')
     username = data.get('username')
-    reels_url = f"https://{RAPIDAPI_HOST}/v1/post_info"
 
     if not url:
         raise HTTPException(status_code=400, detail="URL is required")
 
-    params = {"code_or_id_or_url": url}
-
-    async with aiohttp.ClientSession() as session:
-        async with session.get(reels_url, headers=HEADERS, params=params) as response:
-            if response.status != 200:
-                raise HTTPException(status_code=response.status, detail="Failed to fetch reels data")
-            reels_data_json = await response.json()
-            reels_data = reels_data_json['data']['metrics']
+    # Use the service function that supports debug mode
+    reels_data_json = await fetch_reels_data_api(url)
+    
+    if reels_data_json is None:
+        raise HTTPException(status_code=400, detail="Failed to fetch reels data")
+    
+    reels_data = reels_data_json['data']['metrics']
 
     data = {
         "url": url,
