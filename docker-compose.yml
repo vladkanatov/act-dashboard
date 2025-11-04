@@ -20,6 +20,23 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: instagram_dashboard_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # database URL points to the postgres service inside the compose network
+      DATABASE_URL: "postgresql+asyncpg://postgres:postgres@postgres:5432/instagram_dashboard"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
     driver: local
